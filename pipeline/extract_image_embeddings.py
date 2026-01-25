@@ -19,6 +19,7 @@ import numpy as np
 import torch
 import clip
 from PIL import Image
+from PIL.Image import UnidentifiedImageError
 
 # Import config from pipeline
 sys.path.insert(0, str(Path(__file__).parent))
@@ -91,8 +92,10 @@ def extract_embeddings(metadata: dict, model, preprocess, device) -> tuple[np.nd
                 continue
         
         try:
-            # Load and preprocess image
-            image = Image.open(image_path).convert("RGB")
+            # Load and preprocess image - ensure data is loaded before file closes
+            with Image.open(image_path) as img:
+                image = img.convert("RGB")
+                image.load()  # Force pixel data to be read while file is open
             image_input = preprocess(image).unsqueeze(0).to(device)
             
             # Extract embedding
@@ -111,7 +114,7 @@ def extract_embeddings(metadata: dict, model, preprocess, device) -> tuple[np.nd
             
             print(f"   ✅ Record {record_id}: Extracted ({embedding.shape[0]} dims)")
             
-        except Exception as e:
+        except (FileNotFoundError, UnidentifiedImageError, ValueError, RuntimeError) as e:
             print(f"   ❌ Record {record_id}: Failed - {e}")
             continue
     

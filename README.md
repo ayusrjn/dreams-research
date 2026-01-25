@@ -90,7 +90,7 @@ Extracts CLIP (ViT-B/32) image embeddings from downloaded memories.
 ### Run
 
 ```bash
-source env/bin/activate
+source venv/bin/activate
 python pipeline/extract_image_embeddings.py
 ```
 
