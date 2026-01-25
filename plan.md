@@ -1,18 +1,17 @@
 ### 3.1 Phase 1 — Data Pull & Freezing
 
-**Steps**
+## Steps
 
 1. Pull unprocessed records from Cloudflare D1 Database
 2. Download images using stored URLs
 3. Freeze snapshot for experiments
 
-**Output**
+## Output
 
-```
+```text
 data/raw/
   ├── images/
   └── metadata.json
-
 ```
 
 This snapshot is the **experiment boundary**.
@@ -27,15 +26,15 @@ Each memory is processed into **separate representations**.
 
 ### A. Image Representation
 
-**Model**
+## Model
 
 - CLIP image encoder (ViT-B/32)
 
-**Purpose**
+## Purpose
 
 - Capture environmental / scene context
 
-**Explicit constraint**
+## Explicit Constraint
 
 - Image is **never used** to infer emotion
 
@@ -43,11 +42,11 @@ Each memory is processed into **separate representations**.
 
 ### B. Caption Representation
 
-**Model**
+## Model
 
 - Sentence-BERT (MiniLM)
 
-**Purpose**
+## Purpose
 
 - Narrative similarity
 - Language structure
@@ -56,29 +55,27 @@ Each memory is processed into **separate representations**.
 
 ### C. Emotion Representation
 
-**Source**
+## Source
 
 - Caption text only
 
-**Model**
+## Model
 
 - Pretrained emotion classifier (local, CPU)
 
-**Representation**
+## Representation
 
 ```json
 {
-"valence": float,
-"arousal": float,
-"confidence": float
+  "valence": 0.0,
+  "arousal": 0.0,
+  "confidence": 0.0
 }
-
 ```
 
-**Key rule**
+## Key Rule
 
 > Emotion is an estimate of expressed affect, not internal state.
-> 
 
 ---
 
@@ -95,20 +92,18 @@ Each memory is processed into **separate representations**.
 - Raw lat/lon preserved
 - Offline clustering (DBSCAN / radius)
 
-**Output**
+## Output
 
 ```json
 {
-"place_id":"place_03",
-"centroid":{"lat": ...,"lon": ...}
+  "place_id": "place_03",
+  "centroid": {"lat": 0.0, "lon": 0.0}
 }
-
 ```
 
-**Key rule**
+## Key Rule
 
 > Location is categorical context, not a vector.
-> 
 
 ---
 

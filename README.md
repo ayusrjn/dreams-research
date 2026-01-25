@@ -4,7 +4,7 @@ Memory research pipeline for disentangled feature extraction from captured memor
 
 ## Project Structure
 
-```
+```text
 dreams-research/
 ├── data/
 │   ├── raw/

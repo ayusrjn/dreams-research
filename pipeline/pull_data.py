@@ -65,7 +65,7 @@ def pull_records_from_d1() -> list:
     }
     
     try:
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
         response.raise_for_status()
         data = response.json()
         
@@ -97,8 +97,13 @@ def download_image(url: str, user_id: str, record_id: int) -> str | None:
     if not url:
         return None
     
+    # Sanitize user_id to prevent path traversal attacks
+    sanitized_user_id = Path(user_id).name.replace("..", "_").replace("/", "_").replace("\\", "_")
+    if not sanitized_user_id:
+        sanitized_user_id = "unknown"
+    
     # Create user directory
-    user_dir = IMAGES_DIR / user_id
+    user_dir = IMAGES_DIR / sanitized_user_id
     user_dir.mkdir(parents=True, exist_ok=True)
     
     try:
@@ -115,7 +120,7 @@ def download_image(url: str, user_id: str, record_id: int) -> str | None:
         with open(filepath, "wb") as f:
             f.write(response.content)
         
-        relative_path = f"{user_id}/{filename}"
+        relative_path = f"{sanitized_user_id}/{filename}"
         print(f"   📥 Downloaded: {relative_path}")
         return relative_path
         

@@ -9,10 +9,7 @@ env/
 # Data directory (large files - keep structure, ignore content)
 data/raw/images/**/*.jpg
 data/raw/images/**/*.png
-data/ra# Cloudflare D1 Configuration
-
-# To use: source .env && python pipeline/pull_data.py
-w/images/**/*.webp
+data/raw/images/**/*.webp
 data/snapshots/*/
 
 # Python
