@@ -12,6 +12,11 @@ data/raw/images/**/*.png
 data/raw/images/**/*.webp
 data/snapshots/*/
 
+# Processed outputs (embeddings, indices)
+data/processed/*.npy
+data/processed/*.json
+!data/processed/.gitkeep
+
 # Python
 __pycache__/
 *.py[cod]

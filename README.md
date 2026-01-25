@@ -26,7 +26,8 @@ dreams-research/
 │
 ├── pipeline/                     # Processing scripts
 │   ├── config.py
-│   └── pull_data.py
+│   ├── pull_data.py
+│   └── extract_image_embeddings.py
 │
 ├── analysis/                     # Analysis notebooks
 └── README.md
@@ -82,9 +83,31 @@ The snapshot is the **experiment boundary** for Phase 2.
 
 ---
 
+## Phase 2A: Image Embeddings
+
+Extracts CLIP (ViT-B/32) image embeddings from downloaded memories.
+
+### Run
+
+```bash
+source venv/bin/activate
+python pipeline/extract_image_embeddings.py
+```
+
+### Output
+
+- `data/processed/image_embeddings.npy` - (N, 512) CLIP embeddings
+- `data/processed/image_embedding_index.json` - Record ID to embedding index mapping
+
+---
+
 ## Phases Overview
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| **Phase 1** | Data Pull & Freezing | ✅ Ready |
-| **Phase 2** | Feature Extraction (Image, Caption, Emotion, Time, Location) | 🔜 Planned |
+| **Phase 1** | Data Pull & Freezing | ✅ Complete |
+| **Phase 2A** | Image Embeddings (CLIP) | ✅ Complete |
+| **Phase 2B** | Caption Embeddings (Sentence-BERT) | 🔜 Planned |
+| **Phase 2C** | Emotion Extraction | 🔜 Planned |
+| **Phase 2D** | Temporal Representation | 🔜 Planned |
+| **Phase 2E** | Location Clustering | 🔜 Planned |
