@@ -1,0 +1,100 @@
+{
+  "snapshot_id": "snapshot_2026_01_25",
+  "created_at": "2026-01-25T17:15:19.714093Z",
+  "record_count": 6,
+  "user_count": 3,
+  "user_stats": {
+    "prod-test": {
+      "count": 1,
+      "images": 1
+    },
+    "e59ebdb3-4408-4015-b55c-bbeca4976283": {
+      "count": 3,
+      "images": 3
+    },
+    "554735d2-7cb2-4d0e-a779-37673f13b3eb": {
+      "count": 2,
+      "images": 2
+    }
+  },
+  "records": [
+    {
+      "id": 1,
+      "user_id": "prod-test",
+      "caption": "Production test",
+      "timestamp": "2026-01-25T12:00:00.000Z",
+      "lat": 28.6139,
+      "lon": 77.209,
+      "image_url": "https://res.cloudinary.com/dlcxhyyah/image/upload/v1769319763/dreams/prod-test/fa9a351f-46e0-4d0e-8b09-1baeb8862115.jpg",
+      "local_image": "prod-test/img_001.jpg",
+      "processed": 0,
+      "processing_version": null,
+      "created_at": "2026-01-25 05:42:44"
+    },
+    {
+      "id": 2,
+      "user_id": "e59ebdb3-4408-4015-b55c-bbeca4976283",
+      "caption": "this was a tough day",
+      "timestamp": "2026-01-25T05:51:11.779308Z",
+      "lat": 25.460605,
+      "lon": 85.5108484,
+      "image_url": "https://res.cloudinary.com/dlcxhyyah/image/upload/v1769320275/dreams/e59ebdb3-4408-4015-b55c-bbeca4976283/2cab4d58-f0f6-4181-8841-7c935d55455f.jpg",
+      "local_image": "e59ebdb3-4408-4015-b55c-bbeca4976283/img_002.jpg",
+      "processed": 0,
+      "processing_version": null,
+      "created_at": "2026-01-25 05:51:15"
+    },
+    {
+      "id": 3,
+      "user_id": "e59ebdb3-4408-4015-b55c-bbeca4976283",
+      "caption": "nice day ",
+      "timestamp": "2026-01-25T05:53:29.657076Z",
+      "lat": 25.460605,
+      "lon": 85.5108484,
+      "image_url": "https://res.cloudinary.com/dlcxhyyah/image/upload/v1769320415/dreams/e59ebdb3-4408-4015-b55c-bbeca4976283/dcd5145b-3992-43f2-afaf-4040e200c58b.jpg",
+      "local_image": "e59ebdb3-4408-4015-b55c-bbeca4976283/img_003.jpg",
+      "processed": 0,
+      "processing_version": null,
+      "created_at": "2026-01-25 05:53:36"
+    },
+    {
+      "id": 4,
+      "user_id": "e59ebdb3-4408-4015-b55c-bbeca4976283",
+      "caption": "hello",
+      "timestamp": "2026-01-25T06:01:25.362197Z",
+      "lat": 25.460605,
+      "lon": 85.5108484,
+      "image_url": "https://res.cloudinary.com/dlcxhyyah/image/upload/v1769320888/dreams/e59ebdb3-4408-4015-b55c-bbeca4976283/f2dc4d33-858b-43b8-a3ce-45fad0d13330.jpg",
+      "local_image": "e59ebdb3-4408-4015-b55c-bbeca4976283/img_004.jpg",
+      "processed": 0,
+      "processing_version": null,
+      "created_at": "2026-01-25 06:01:29"
+    },
+    {
+      "id": 5,
+      "user_id": "554735d2-7cb2-4d0e-a779-37673f13b3eb",
+      "caption": "things have been going good",
+      "timestamp": "2026-01-25T06:21:55.837735Z",
+      "lat": 25.460605,
+      "lon": 85.5108484,
+      "image_url": "https://res.cloudinary.com/dlcxhyyah/image/upload/v1769322118/dreams/554735d2-7cb2-4d0e-a779-37673f13b3eb/4964a3ca-baed-47f4-a71e-37c26adb662f.jpg",
+      "local_image": "554735d2-7cb2-4d0e-a779-37673f13b3eb/img_005.jpg",
+      "processed": 0,
+      "processing_version": null,
+      "created_at": "2026-01-25 06:21:59"
+    },
+    {
+      "id": 6,
+      "user_id": "554735d2-7cb2-4d0e-a779-37673f13b3eb",
+      "caption": "things have been improving",
+      "timestamp": "2026-01-25T06:22:21.740191Z",
+      "lat": 25.4606153,
+      "lon": 85.5108457,
+      "image_url": "https://res.cloudinary.com/dlcxhyyah/image/upload/v1769322143/dreams/554735d2-7cb2-4d0e-a779-37673f13b3eb/883fd1fa-d4cf-49ec-9f02-eb5dbae14d44.jpg",
+      "local_image": "554735d2-7cb2-4d0e-a779-37673f13b3eb/img_006.jpg",
+      "processed": 0,
+      "processing_version": null,
+      "created_at": "2026-01-25 06:22:24"
+    }
+  ]
+}
