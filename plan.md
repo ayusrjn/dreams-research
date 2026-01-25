@@ -44,7 +44,32 @@ Each memory is processed into **separate representations**.
 
 ## Model
 
-- Sentence-BERT (MiniLM)
+- Sentence-BERT (MiniLM) 
+### what is to be done 
+Strip leading/trailing whitespace
+
+Normalize Unicode
+
+Keep punctuation
+
+Keep casing (MiniLM is case-sensitive)
+### what is not to be done 
+Strip leading/trailing whitespace
+
+Normalize Unicode
+
+Keep punctuation
+
+Keep casing (MiniLM is case-sensitive)
+
+### Output 
+Output
+
+Shape: (384,)
+
+Unit-normalized vector
+
+Stored locally (not Mongo)
 
 ## Purpose
 

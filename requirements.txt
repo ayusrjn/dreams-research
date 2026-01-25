@@ -7,6 +7,8 @@ clip @ git+https://github.com/openai/CLIP.git@dcba3cb
 Pillow>=10.3.0
 numpy>=1.24.0
 
+# Phase 2B: Caption Embeddings
+sentence-transformers>=2.2.0
+
 # Future Phase 2 components (uncomment when ready)
-# sentence-transformers>=2.2.0
 # transformers>=4.30.0
