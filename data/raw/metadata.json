@@ -1,0 +1,101 @@
+{
+  "snapshot_id": "snapshot_2026_01_25",
+  "created_at": "2026-01-25T17:15:19.714093Z",
+  "record_count": 6,
+  "user_count": 3,
+  "user_stats": {
+    "user_001": {
+      "count": 1,
+      "images": 1
+    },
+    "user_002": {
+      "count": 3,
+      "images": 3
+    },
+    "user_003": {
+      "count": 2,
+      "images": 2
+    }
+  },
+  "_redaction_note": "PII redacted for repository safety. Real data stored in secure external snapshot.",
+  "records": [
+    {
+      "id": 1,
+      "user_id": "user_001",
+      "caption": "[REDACTED]",
+      "timestamp": "2026-01-25T12:00:00.000Z",
+      "lat": 0.0,
+      "lon": 0.0,
+      "image_url": "[REDACTED]",
+      "local_image": "user_001/img_001.jpg",
+      "processed": 0,
+      "processing_version": null,
+      "created_at": "2026-01-25T05:42:44Z"
+    },
+    {
+      "id": 2,
+      "user_id": "user_002",
+      "caption": "[REDACTED]",
+      "timestamp": "2026-01-25T05:51:11.779308Z",
+      "lat": 0.0,
+      "lon": 0.0,
+      "image_url": "[REDACTED]",
+      "local_image": "user_002/img_002.jpg",
+      "processed": 0,
+      "processing_version": null,
+      "created_at": "2026-01-25T05:51:15Z"
+    },
+    {
+      "id": 3,
+      "user_id": "user_002",
+      "caption": "[REDACTED]",
+      "timestamp": "2026-01-25T05:53:29.657076Z",
+      "lat": 0.0,
+      "lon": 0.0,
+      "image_url": "[REDACTED]",
+      "local_image": "user_002/img_003.jpg",
+      "processed": 0,
+      "processing_version": null,
+      "created_at": "2026-01-25T05:53:36Z"
+    },
+    {
+      "id": 4,
+      "user_id": "user_002",
+      "caption": "[REDACTED]",
+      "timestamp": "2026-01-25T06:01:25.362197Z",
+      "lat": 0.0,
+      "lon": 0.0,
+      "image_url": "[REDACTED]",
+      "local_image": "user_002/img_004.jpg",
+      "processed": 0,
+      "processing_version": null,
+      "created_at": "2026-01-25T06:01:29Z"
+    },
+    {
+      "id": 5,
+      "user_id": "user_003",
+      "caption": "[REDACTED]",
+      "timestamp": "2026-01-25T06:21:55.837735Z",
+      "lat": 0.0,
+      "lon": 0.0,
+      "image_url": "[REDACTED]",
+      "local_image": "user_003/img_005.jpg",
+      "processed": 0,
+      "processing_version": null,
+      "created_at": "2026-01-25T06:21:59Z"
+    },
+    {
+      "id": 6,
+      "user_id": "user_003",
+      "caption": "[REDACTED]",
+      "timestamp": "2026-01-25T06:22:21.740191Z",
+      "lat": 0.0,
+      "lon": 0.0,
+      "image_url": "[REDACTED]",
+      "local_image": "user_003/img_006.jpg",
+      "processed": 0,
+      "processing_version": null,
+      "created_at": "2026-01-25T06:22:24Z"
+    }
+  ]
+}

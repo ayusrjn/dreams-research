@@ -1,0 +1,26 @@
+# Ignore virtual environment
+venv/
+.venv/
+env/
+
+# Environment files
+.env
+
+# Data directory (large files - keep structure, ignore content)
+data/raw/images/**/*.jpg
+data/raw/images/**/*.png
+data/raw/images/**/*.webp
+data/snapshots/*/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+
+# Exports
+export*.csv
