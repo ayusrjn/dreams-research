@@ -101,13 +101,38 @@ python pipeline/extract_image_embeddings.py
 
 ---
 
+## Phase 2B: Caption Embeddings
+
+Extracts Sentence-BERT (MiniLM) text embeddings from memory captions.
+
+### Run
+
+```bash
+source venv/bin/activate
+pip install sentence-transformers>=2.2.0
+python pipeline/extract_caption_embeddings.py
+```
+
+### Output
+
+- `data/processed/text_embeddings.npy` - (N, 384) Sentence-BERT embeddings
+- `data/processed/caption_embedding_index.json` - Record ID to embedding index mapping
+
+### Preprocessing Rules
+
+- Unicode normalization (NFC)
+- Strip leading/trailing whitespace
+- Preserve punctuation and casing
+
+---
+
 ## Phases Overview
 
 | Phase | Description | Status |
 |-------|-------------|--------|
 | **Phase 1** | Data Pull & Freezing | ✅ Complete |
 | **Phase 2A** | Image Embeddings (CLIP) | ✅ Complete |
-| **Phase 2B** | Caption Embeddings (Sentence-BERT) | 🔜 Planned |
+| **Phase 2B** | Caption Embeddings (Sentence-BERT) | ✅ Complete |
 | **Phase 2C** | Emotion Extraction | 🔜 Planned |
 | **Phase 2D** | Temporal Representation | 🔜 Planned |
 | **Phase 2E** | Location Clustering | 🔜 Planned |
