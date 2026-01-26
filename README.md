@@ -1,270 +1,129 @@
-# DREAMS Research Pipeline
+# DREAMS: Disentangled Representation Extraction & Analysis of Memory Streams
 
-Memory research pipeline for disentangled feature extraction from captured memories.
+**DREAMS** is a computational research pipeline designed to quantitatively validate the existence of "Stable Emotional Fingerprints" in human memory. By disentangling the multimodal dimensions of memory streams—visual, narrative, spatial, and temporal—this project seeks to determine if specific physical locations induce statistically consistent emotional states over time.
 
-## Project Structure
+---
 
-```text
-dreams-research/
-├── data/
-│   ├── raw/
-│   │   ├── images/
-│   │   │   ├── user_01/          # Images organized by user
-│   │   │   │   ├── img_001.jpg
-│   │   │   │   └── img_002.jpg
-│   │   │   └── user_02/
-│   │   └── metadata.json         # All records with local image paths
-│   │
-│   ├── processed/                # Phase 2 outputs
-│   │   ├── image_embeddings.npy
-│   │   ├── text_embeddings.npy
-│   │   ├── emotion_scores.csv
-│   │   └── place_ids.csv
-│   │
-│   └── snapshots/                # Frozen experiment boundaries
-│       └── snapshot_2026_01_25/
-│
-├── pipeline/                     # Processing scripts
-│   ├── config.py
-│   ├── pull_data.py
-│   └── extract_image_embeddings.py
-│
-├── analysis/                     # Analysis notebooks
-└── README.md
-```
+## 🧪 Research Hypothesis
 
-## D1 Database Schema
+The core premise of this research is that physical and semantic locations possess a **Stable Emotional Fingerprint**. We hypothesize that when a user visits the same place repeatedly, their emotional state converges to a consistent, statistically stable pattern, independent of transient mood fluctuations.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | int | Primary key |
-| `user_id` | string | User UUID |
-| `caption` | string | Memory caption |
-| `timestamp` | datetime | When memory was captured |
-| `lat` | float | Latitude |
-| `lon` | float | Longitude |
-| `image_url` | string | Cloudinary URL |
-| `processed` | int | 0 = unprocessed |
-| `processing_version` | string | Pipeline version |
-| `created_at` | datetime | DB insert time |
+To test this, we define the analysis unit at the $(u, p) = (user\_id, place\_id)$ level to preserve individual narrative contexts.
 
-## Phase 1: Data Pull & Freezing
+---
 
-### Setup
+## 📐 Mathematical Framework
+
+We model the emotional state of a memory at time $t$ as a low-dimensional continuous vector:
+
+$$C_{t} = [valence, arousal]$$
+
+where $valence \in [0, 1]$ (Unpleasant $\to$ Pleasant) and $arousal \in [0, 1]$ (Calm $\to$ Excited).
+
+To quantify the stability of a location's fingerprint, we compute the following metrics for each user-place pair $(u, p)$:
+
+### 1. Mean Emotional State (The "Center")
+The expected emotional baseline for a specific location:
+$$\mu_{u,p} = \mathbb{E}[C_{t}]$$
+
+### 2. Emotional Variability
+We measure the dispersion of emotional states using the covariance matrix:
+$$\Sigma_{u,p} = Cov(C_{t})$$
+
+### 3. Stability (Variance Ellipse)
+The volatility of the location is proportional to the area of the variance ellipse defined by $\Sigma_{u,p}$:
+$$A_{u,p} \propto \sqrt{|\Sigma_{u,p}|}$$
+*   **Small Area**: High stability (Strong Fingerprint).
+*   **Large Area**: Low stability (Volatile Context).
+
+### 4. Emotion Entropy
+To assess the consistency of discrete emotion types (e.g., Joy vs. Fear), we calculate the entropy of the probability distribution:
+$$H_{u,p} = -\sum_{k} \overline{P}_{u,p}^{k} \log \overline{P}_{u,p}^{k}$$
+
+---
+
+## 🏗️ Pipeline Architecture
+
+The pipeline executes in three phases to transform raw logs into research-ready vectors.
+
+### Phase 1: Acquisition & Freezing
+*   **Objective**: Establish an immutable "Snapshot" of the raw data.
+*   **Process**: Pulls multimodal logs (images, captions, metadata) from the Cloudflare D1 database and freezes them to ensure reproducibility.
+
+### Phase 2: Feature Extraction
+We extract disentangled representations using state-of-the-art models:
+*   **Visual**: CLIP (ViT-B/32) for scene semantics.
+*   **Semantic**: Sentence-BERT (`all-MiniLM-L6-v2`) for narrative structure.
+*   **Spatial**: **DBSCAN Clustering** ($\epsilon \approx 50m$) converts raw GPS coordinates into categorical Place IDs ($p$), enabling the $(u, p)$ analysis.
+*   **Temporal**: Cyclic encoding ($\sin/\cos$) of time-of-day.
+
+### Phase 3: Grand Fusion
+*   **Objective**: Synthesis.
+*   **Process**: Aligns all scalar features into a `master_manifest.parquet` and synchronizes high-dimensional arrays (`.npy`) for longitudinal analysis.
+
+---
+
+## � Research Outcomes
+
+Based on the stability metrics defined above, we aim to categorize locations into three distinct types relative to a user's baseline:
+
+1.  **Emotional Safe Space**: High Valence, Low Arousal, **Low Variance** ($A_{u,p} \to 0$).
+2.  **Chronic Stressor**: Low Valence, High Arousal, **Low Variance** (Consistently negative).
+3.  **Emotionally Volatile**: High Variance ($A_{u,p} \to \infty$), indicating the location does not exert a strong emotional anchor.
+
+---
+
+## 🔮 Future Directions
+
+This framework lays the groundwork for distinguishing between **Scene-Driven** vs. **Place-Driven** stability. Future experiments will test whether emotional consistency is driven by visual similarity (e.g., "I feel calm when I see trees") or contextual identity (e.g., "I feel calm because I am at Home," regardless of the visual view).
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+*   Python 3.10+
+*   CUDA-capable GPU (recommended)
+
+### Installation
 
 ```bash
-# Create virtual environment
+git clone https://github.com/ayusrjn/dreams-research.git
+cd dreams-research
 python3 -m venv venv
 source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your Cloudflare D1 credentials
 ```
 
-### Run
+### Reproduction
 
 ```bash
-source .env
+# 1. Pull Data
 python pipeline/pull_data.py
-```
 
-### Output
-
-After running:
-- `data/raw/images/{user_id}/` - Downloaded images per user
-- `data/raw/metadata.json` - All records with local paths
-- `data/snapshots/snapshot_YYYY_MM_DD/` - Frozen copy
-
-The snapshot is the **experiment boundary** for Phase 2.
-
----
-
-## Phase 2A: Image Embeddings
-
-Extracts CLIP (ViT-B/32) image embeddings from downloaded memories.
-
-### Run
-
-```bash
-source venv/bin/activate
+# 2. Extract Features
 python pipeline/extract_image_embeddings.py
-```
-
-### Output
-
-- `data/processed/image_embeddings.npy` - (N, 512) CLIP embeddings
-- `data/processed/image_embedding_index.json` - Record ID to embedding index mapping
-
----
-
-## Phase 2B: Caption Embeddings
-
-Extracts Sentence-BERT (MiniLM) text embeddings from memory captions.
-
-### Run
-
-```bash
-source venv/bin/activate
-pip install sentence-transformers>=2.2.0
 python pipeline/extract_caption_embeddings.py
-```
-
-### Output
-
-- `data/processed/text_embeddings.npy` - (N, 384) Sentence-BERT embeddings
-- `data/processed/caption_embedding_index.json` - Record ID to embedding index mapping
-
-### Preprocessing Rules
-
-- Unicode normalization (NFC)
-- Strip leading/trailing whitespace
-- Preserve punctuation and casing
-
----
-
-## Phase 2C: Emotion Extraction
-
-Extracts emotional features from captions using pretrained models:
-- **Valence/Arousal**: Dimensional emotion (Mavdol/NPC-Valence-Arousal-Prediction)
-- **Discrete Emotions**: Categorical probabilities (j-hartmann/emotion-english-distilroberta-base)
-
-### Run
-
-```bash
-source venv/bin/activate
 python pipeline/extract_emotions.py
-```
-
-### Output
-
-- `data/processed/emotion_scores.csv` - Emotion features per record
-
-### Columns
-
-| Column | Description |
-|--------|-------------|
-| `id` | Unique record identifier |
-| `user_id` | User identifier |
-| `valence` | Pleasant (1) ↔ Unpleasant (0) |
-| `arousal` | High energy (1) ↔ Low energy (0) |
-| `joy` | Probability of joy |
-| `sadness` | Probability of sadness |
-| `fear` | Probability of fear |
-| `anger` | Probability of anger |
-| `neutral` | Probability of neutral |
-| `disgust` | Probability of disgust |
-| `surprise` | Probability of surprise |
-
-> Emotion is an estimate of expressed affect, not internal state.
-
----
-
-## Phase 2D: Temporal Representation
-
-Extracts temporal features from timestamps for circadian and longitudinal analysis.
-
-### Run
-
-```bash
-source venv/bin/activate
 python pipeline/extract_temporal_features.py
-```
-
-### Output
-
-- `data/processed/temporal_features.csv` - Temporal features per record
-
-### Columns
-
-| Column | Description |
-|--------|-------------|
-| `id` | Unique record identifier |
-| `user_id` | User identifier |
-| `absolute_utc` | ISO-8601 UTC timestamp |
-| `relative_day` | Days since user's first entry |
-| `sin_hour` | sin(2π × hour / 24) - Circadian X coordinate |
-| `cos_hour` | cos(2π × hour / 24) - Circadian Y coordinate |
-
-> Circadian encoding ensures 23:00 and 01:00 are mathematically close.
-
----
-
-## Phase 2E: Location Clustering
-
-Clusters raw GPS coordinates into categorical Place IDs using DBSCAN.
-
-### Run
-
-```bash
-source venv/bin/activate
 python pipeline/extract_location_clusters.py
-```
 
-### Output
-
-- `data/processed/place_ids.csv` - Place ID assignments per record
-
-### Columns
-
-| Column | Description |
-|--------|-------------|
-| `id` | Unique record identifier |
-| `user_id` | User identifier |
-| `raw_lat` | Original latitude |
-| `raw_lon` | Original longitude |
-| `place_id` | Cluster identifier (e.g., `place_01`) |
-| `centroid_lat` | Cluster centroid latitude |
-| `centroid_lon` | Cluster centroid longitude |
-| `is_new_cluster` | For incrementatl processing |
-
-### Algorithm
-
-- **Snap-to-grid**: Truncate coordinates to 4 decimal places (~11m buffer)
-- **DBSCAN**: Haversine metric, ε≈7.85×10⁻⁶ radians (~50m), min_samples=1
-
-> Location is categorical context, not a vector.
-
----
-
-## Phase 3: Grand Fusion
-
-Merges all extracted features into a single Master Manifest and synchronizes high-dimensional vectors.
-
-### Run
-
-```bash
-source venv/bin/activate
-pip install pandas pyarrow
+# 3. Fuse
 python pipeline/create_master_manifest.py
 ```
 
-### Output
+---
 
-- `data/processed/master_manifest.parquet` - Unified dataframe (Metadata + Emotion + Temporal + Place)
-- `data/processed/final_image_vectors.npy` - (N, 512) Aligned CLIP vectors
-- `data/processed/final_text_vectors.npy` - (N, 384) Aligned S-BERT vectors
+## 📂 Data Schema
 
-### Verification
-
-```bash
-python pipeline/verify_alignment.py
-```
+| File | Shape | Description |
+| :--- | :--- | :--- |
+| `master_manifest.parquet` | $(N, M)$ | Metadata, Place IDs, Emotion Scores ($C_t$). |
+| `final_image_vectors.npy` | $(N, 512)$ | CLIP Visual Embeddings. |
+| `final_text_vectors.npy` | $(N, 384)$ | S-BERT Narrative Embeddings. |
 
 ---
 
-## Phases Overview
+## 📜 Citation
 
-| Phase | Description | Status |
-|-------|-------------|--------|
-| **Phase 1** | Data Pull & Freezing | ✅ Complete |
-| **Phase 2A** | Image Embeddings (CLIP) | ✅ Complete |
-| **Phase 2B** | Caption Embeddings (Sentence-BERT) | ✅ Complete |
-| **Phase 2C** | Emotion Extraction | ✅ Complete |
-| **Phase 2D** | Temporal Representation | ✅ Complete |
-| **Phase 2E** | Location Clustering | ✅ Complete |
-| **Phase 3** | Grand Fusion (Manifest + Vectors) | ✅ Complete |
-
+> [Author Name], "DREAMS: Disentangled Representation Extraction & Analysis of Memory Streams," 2026.
