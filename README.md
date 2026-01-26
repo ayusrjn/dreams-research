@@ -1,10 +1,10 @@
-# DREAMS: Disentangled Representation Extraction & Analysis of Memory Streams
+# DREAMS: 
 
 **DREAMS** is a computational research pipeline designed to quantitatively validate the existence of "Stable Emotional Fingerprints" in human memory. By disentangling the multimodal dimensions of memory streams—visual, narrative, spatial, and temporal—this project seeks to determine if specific physical locations induce statistically consistent emotional states over time.
 
 ---
 
-## 🧪 Research Hypothesis
+##  Research Hypothesis
 
 The core premise of this research is that physical and semantic locations possess a **Stable Emotional Fingerprint**. We hypothesize that when a user visits the same place repeatedly, their emotional state converges to a consistent, statistically stable pattern, independent of transient mood fluctuations.
 
@@ -12,7 +12,7 @@ To test this, we define the analysis unit at the $(u, p) = (user\_id, place\_id)
 
 ---
 
-## 📐 Mathematical Framework
+##  Mathematical Framework
 
 We model the emotional state of a memory at time $t$ as a low-dimensional continuous vector:
 
@@ -42,7 +42,7 @@ $$H_{u,p} = -\sum_{k} \overline{P}_{u,p}^{k} \log \overline{P}_{u,p}^{k}$$
 
 ---
 
-## 🏗️ Pipeline Architecture
+##  Pipeline Architecture
 
 The pipeline executes in three phases to transform raw logs into research-ready vectors.
 
@@ -63,7 +63,7 @@ We extract disentangled representations using state-of-the-art models:
 
 ---
 
-## � Research Outcomes
+## Research Outcomes
 
 Based on the stability metrics defined above, we aim to categorize locations into three distinct types relative to a user's baseline:
 
@@ -73,13 +73,13 @@ Based on the stability metrics defined above, we aim to categorize locations int
 
 ---
 
-## 🔮 Future Directions
+##  Future Directions
 
 This framework lays the groundwork for distinguishing between **Scene-Driven** vs. **Place-Driven** stability. Future experiments will test whether emotional consistency is driven by visual similarity (e.g., "I feel calm when I see trees") or contextual identity (e.g., "I feel calm because I am at Home," regardless of the visual view).
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 *   Python 3.10+
@@ -114,7 +114,7 @@ python pipeline/create_master_manifest.py
 
 ---
 
-## 📂 Data Schema
+##  Data Schema
 
 | File | Shape | Description |
 | :--- | :--- | :--- |
@@ -123,7 +123,3 @@ python pipeline/create_master_manifest.py
 | `final_text_vectors.npy` | $(N, 384)$ | S-BERT Narrative Embeddings. |
 
 ---
-
-## 📜 Citation
-
-> [Author Name], "DREAMS: Disentangled Representation Extraction & Analysis of Memory Streams," 2026.
