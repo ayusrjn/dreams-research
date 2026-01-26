@@ -12,6 +12,7 @@ Output:
         temporal_features.csv - Temporal features per record
 """
 
+import csv
 import json
 import math
 import sys
@@ -186,11 +187,11 @@ def save_outputs(results: list[dict]) -> None:
     
     headers = ["id", "user_id", "absolute_utc", "relative_day", "sin_hour", "cos_hour"]
     
-    with open(TEMPORAL_FEATURES_PATH, "w") as f:
-        f.write(",".join(headers) + "\n")
+    with open(TEMPORAL_FEATURES_PATH, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(headers)
         for r in results:
-            row = [str(r.get(h, "")) for h in headers]
-            f.write(",".join(row) + "\n")
+            writer.writerow([r.get(h, "") for h in headers])
     
     print(f"💾 Temporal features saved: {TEMPORAL_FEATURES_PATH}")
     print(f"   Records: {len(results)}")
