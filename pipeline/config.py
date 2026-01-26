@@ -20,6 +20,7 @@ IMAGE_EMBEDDING_INDEX_PATH = PROCESSED_DIR / "image_embedding_index.json"
 TEXT_EMBEDDINGS_PATH = PROCESSED_DIR / "text_embeddings.npy"
 CAPTION_EMBEDDING_INDEX_PATH = PROCESSED_DIR / "caption_embedding_index.json"
 EMOTION_SCORES_PATH = PROCESSED_DIR / "emotion_scores.csv"
+TEMPORAL_FEATURES_PATH = PROCESSED_DIR / "temporal_features.csv"
 PLACE_IDS_PATH = PROCESSED_DIR / "place_ids.csv"
 
 # Snapshots
