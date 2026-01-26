@@ -12,10 +12,14 @@ data/raw/images/**/*.png
 data/raw/images/**/*.webp
 data/snapshots/*/
 
-# Processed outputs (embeddings, indices)
+# Processed outputs (embeddings, indices, scores)
 data/processed/*.npy
 data/processed/*.json
+data/processed/*.csv
 !data/processed/.gitkeep
+
+# Raw data with PII
+data/raw/metadata.json
 
 # Python
 __pycache__/
