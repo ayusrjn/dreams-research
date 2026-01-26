@@ -55,3 +55,8 @@ EMOTION_SCHEMA = {
     "arousal": float,
     "confidence": float
 }
+
+# Location clustering parameters (Phase 2E)
+DBSCAN_EPS = 0.0005  # ~50m in radians for haversine metric
+DBSCAN_MIN_SAMPLES = 1  # Single entries are valid data points
+COORD_DECIMAL_PLACES = 4  # ~11m precision for snap-to-grid

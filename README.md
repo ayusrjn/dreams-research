@@ -193,6 +193,43 @@ python pipeline/extract_temporal_features.py
 
 ---
 
+## Phase 2E: Location Clustering
+
+Clusters raw GPS coordinates into categorical Place IDs using DBSCAN.
+
+### Run
+
+```bash
+source venv/bin/activate
+python pipeline/extract_location_clusters.py
+```
+
+### Output
+
+- `data/processed/place_ids.csv` - Place ID assignments per record
+
+### Columns
+
+| Column | Description |
+|--------|-------------|
+| `id` | Unique record identifier |
+| `user_id` | User identifier |
+| `raw_lat` | Original latitude |
+| `raw_lon` | Original longitude |
+| `place_id` | Cluster identifier (e.g., `place_01`) |
+| `centroid_lat` | Cluster centroid latitude |
+| `centroid_lon` | Cluster centroid longitude |
+| `is_new_cluster` | For incremental processing |
+
+### Algorithm
+
+- **Snap-to-grid**: Truncate coordinates to 4 decimal places (~11m buffer)
+- **DBSCAN**: Haversine metric, ε=0.0005 (~50m), min_samples=1
+
+> Location is categorical context, not a vector.
+
+---
+
 ## Phases Overview
 
 | Phase | Description | Status |
@@ -202,5 +239,5 @@ python pipeline/extract_temporal_features.py
 | **Phase 2B** | Caption Embeddings (Sentence-BERT) | ✅ Complete |
 | **Phase 2C** | Emotion Extraction | ✅ Complete |
 | **Phase 2D** | Temporal Representation | ✅ Complete |
-| **Phase 2E** | Location Clustering | 🔜 Planned |
+| **Phase 2E** | Location Clustering | ✅ Complete |
 
