@@ -1,4 +1,4 @@
-# DREAMS: Disentangled Representation Extraction & Analysis of Memory Streams
+# DREAMS: 
 
 **DREAMS** is a computational research pipeline designed to quantitatively validate the existence of "Stable Emotional Fingerprints" in human memory. By disentangling the multimodal dimensions of memory streams—visual, narrative, spatial, and temporal—this project seeks to determine if specific physical locations induce statistically consistent emotional states over time.
 
@@ -123,7 +123,3 @@ python pipeline/create_master_manifest.py
 | `final_text_vectors.npy` | $(N, 384)$ | S-BERT Narrative Embeddings. |
 
 ---
-
-##  Citation
-
-> [Author Name], "DREAMS: Disentangled Representation Extraction & Analysis of Memory Streams," 2026.
