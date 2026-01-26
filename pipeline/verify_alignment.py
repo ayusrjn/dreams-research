@@ -35,6 +35,16 @@ def main():
         return
         
     df = pd.read_parquet(MASTER_MANIFEST_PATH)
+    
+    # Explicitly check for vector files
+    if not FINAL_IMAGE_VECTORS_PATH.exists():
+        print(f"❌ Missing vector file FINAL_IMAGE_VECTORS_PATH: {FINAL_IMAGE_VECTORS_PATH}")
+        sys.exit(1)
+        
+    if not FINAL_TEXT_VECTORS_PATH.exists():
+        print(f"❌ Missing vector file FINAL_TEXT_VECTORS_PATH: {FINAL_TEXT_VECTORS_PATH}")
+        sys.exit(1)
+        
     img_vecs = np.load(FINAL_IMAGE_VECTORS_PATH)
     txt_vecs = np.load(FINAL_TEXT_VECTORS_PATH)
     
