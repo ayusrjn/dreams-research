@@ -10,5 +10,5 @@ numpy>=1.24.0
 # Phase 2B: Caption Embeddings
 sentence-transformers>=2.2.0
 
-# Future Phase 2 components (uncomment when ready)
-# transformers>=4.30.0
+# Phase 2C: Emotion Extraction
+transformers>=4.30.0

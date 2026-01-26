@@ -28,6 +28,8 @@ SNAPSHOTS_DIR = DATA_DIR / "snapshots"
 # Model configurations (Phase 2)
 CLIP_MODEL = "ViT-B/32"
 SENTENCE_BERT_MODEL = "all-MiniLM-L6-v2"
+EMOTION_MODEL = "Mavdol/NPC-Valence-Arousal-Prediction"
+DISCRETE_EMOTION_MODEL = "j-hartmann/emotion-english-distilroberta-base"
 
 # D1 Database Schema
 D1_SCHEMA = {

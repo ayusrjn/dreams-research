@@ -126,6 +126,41 @@ python pipeline/extract_caption_embeddings.py
 
 ---
 
+## Phase 2C: Emotion Extraction
+
+Extracts emotional features from captions using pretrained models:
+- **Valence/Arousal**: Dimensional emotion (Mavdol/NPC-Valence-Arousal-Prediction)
+- **Discrete Emotions**: Categorical probabilities (j-hartmann/emotion-english-distilroberta-base)
+
+### Run
+
+```bash
+source venv/bin/activate
+python pipeline/extract_emotions.py
+```
+
+### Output
+
+- `data/processed/emotion_scores.csv` - Emotion features per record
+
+### Columns
+
+| Column | Description |
+|--------|-------------|
+| `valence` | Pleasant (1) ↔ Unpleasant (0) |
+| `arousal` | High energy (1) ↔ Low energy (0) |
+| `joy` | Probability of joy |
+| `sadness` | Probability of sadness |
+| `fear` | Probability of fear |
+| `anger` | Probability of anger |
+| `neutral` | Probability of neutral |
+| `disgust` | Probability of disgust |
+| `surprise` | Probability of surprise |
+
+> Emotion is an estimate of expressed affect, not internal state.
+
+---
+
 ## Phases Overview
 
 | Phase | Description | Status |
@@ -133,6 +168,6 @@ python pipeline/extract_caption_embeddings.py
 | **Phase 1** | Data Pull & Freezing | ✅ Complete |
 | **Phase 2A** | Image Embeddings (CLIP) | ✅ Complete |
 | **Phase 2B** | Caption Embeddings (Sentence-BERT) | ✅ Complete |
-| **Phase 2C** | Emotion Extraction | 🔜 Planned |
+| **Phase 2C** | Emotion Extraction | ✅ Complete |
 | **Phase 2D** | Temporal Representation | 🔜 Planned |
 | **Phase 2E** | Location Clustering | 🔜 Planned |
