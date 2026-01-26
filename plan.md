@@ -88,6 +88,21 @@ Stored locally (not Mongo)
 
 - Pretrained emotion classifier (local, CPU)
 
+### What is to be done 
+Input caption text
+
+Tokenize (standard RoBERTa tokenizer)
+
+Forward pass through DistilRoBERTa
+
+Softmax over emotion labels
+
+Output probability distribution
+
+Project to valence–arousal space
+
+Store (valence, arousal, confidence)
+
 ## Representation
 
 ```json
