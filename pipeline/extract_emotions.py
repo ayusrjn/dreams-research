@@ -116,7 +116,8 @@ def extract_emotions(metadata: dict, va_tokenizer, va_model, va_device, discrete
                     valence = float(predictions[0])
                     arousal = 0.5
             
-            discrete_results = discrete_classifier(caption)[0]
+            discrete_output = discrete_classifier(caption)
+            discrete_results = discrete_output[0] if discrete_output else []
             emotion_scores = {item["label"]: round(item["score"], 4) for item in discrete_results}
             
             result = {

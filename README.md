@@ -147,6 +147,8 @@ python pipeline/extract_emotions.py
 
 | Column | Description |
 |--------|-------------|
+| `id` | Unique record identifier |
+| `user_id` | User identifier |
 | `valence` | Pleasant (1) ↔ Unpleasant (0) |
 | `arousal` | High energy (1) ↔ Low energy (0) |
 | `joy` | Probability of joy |
