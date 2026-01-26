@@ -16,6 +16,7 @@ data/snapshots/*/
 data/processed/*.npy
 data/processed/*.json
 data/processed/*.csv
+data/processed/*.parquet
 !data/processed/.gitkeep
 
 # Raw data with PII

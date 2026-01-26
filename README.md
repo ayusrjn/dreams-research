@@ -230,6 +230,32 @@ python pipeline/extract_location_clusters.py
 
 ---
 
+## Phase 3: Grand Fusion
+
+Merges all extracted features into a single Master Manifest and synchronizes high-dimensional vectors.
+
+### Run
+
+```bash
+source venv/bin/activate
+pip install pandas pyarrow
+python pipeline/create_master_manifest.py
+```
+
+### Output
+
+- `data/processed/master_manifest.parquet` - Unified dataframe (Metadata + Emotion + Temporal + Place)
+- `data/processed/final_image_vectors.npy` - (N, 512) Aligned CLIP vectors
+- `data/processed/final_text_vectors.npy` - (N, 384) Aligned S-BERT vectors
+
+### Verification
+
+```bash
+python pipeline/verify_alignment.py
+```
+
+---
+
 ## Phases Overview
 
 | Phase | Description | Status |
@@ -240,4 +266,5 @@ python pipeline/extract_location_clusters.py
 | **Phase 2C** | Emotion Extraction | ✅ Complete |
 | **Phase 2D** | Temporal Representation | ✅ Complete |
 | **Phase 2E** | Location Clustering | ✅ Complete |
+| **Phase 3** | Grand Fusion (Manifest + Vectors) | ✅ Complete |
 
