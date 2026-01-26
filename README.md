@@ -219,12 +219,12 @@ python pipeline/extract_location_clusters.py
 | `place_id` | Cluster identifier (e.g., `place_01`) |
 | `centroid_lat` | Cluster centroid latitude |
 | `centroid_lon` | Cluster centroid longitude |
-| `is_new_cluster` | For incremental processing |
+| `is_new_cluster` | For incrementatl processing |
 
 ### Algorithm
 
 - **Snap-to-grid**: Truncate coordinates to 4 decimal places (~11m buffer)
-- **DBSCAN**: Haversine metric, ε=0.0005 (~50m), min_samples=1
+- **DBSCAN**: Haversine metric, ε≈7.85×10⁻⁶ radians (~50m), min_samples=1
 
 > Location is categorical context, not a vector.
 

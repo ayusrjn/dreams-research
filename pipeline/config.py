@@ -57,6 +57,7 @@ EMOTION_SCHEMA = {
 }
 
 # Location clustering parameters (Phase 2E)
-DBSCAN_EPS = 0.0005  # ~50m in radians for haversine metric
+# Earth radius ≈ 6,371 km; eps in radians = distance / radius
+DBSCAN_EPS = 50 / 6_371_000  # ~50m in radians for haversine metric
 DBSCAN_MIN_SAMPLES = 1  # Single entries are valid data points
 COORD_DECIMAL_PLACES = 4  # ~11m precision for snap-to-grid
