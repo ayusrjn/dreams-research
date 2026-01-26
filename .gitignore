@@ -33,3 +33,7 @@ __pycache__/
 
 # Exports
 export*.csv
+
+# MkDocs build output
+site/
+
