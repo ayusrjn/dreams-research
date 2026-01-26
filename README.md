@@ -163,6 +163,36 @@ python pipeline/extract_emotions.py
 
 ---
 
+## Phase 2D: Temporal Representation
+
+Extracts temporal features from timestamps for circadian and longitudinal analysis.
+
+### Run
+
+```bash
+source venv/bin/activate
+python pipeline/extract_temporal_features.py
+```
+
+### Output
+
+- `data/processed/temporal_features.csv` - Temporal features per record
+
+### Columns
+
+| Column | Description |
+|--------|-------------|
+| `id` | Unique record identifier |
+| `user_id` | User identifier |
+| `absolute_utc` | ISO-8601 UTC timestamp |
+| `relative_day` | Days since user's first entry |
+| `sin_hour` | sin(2π × hour / 24) - Circadian X coordinate |
+| `cos_hour` | cos(2π × hour / 24) - Circadian Y coordinate |
+
+> Circadian encoding ensures 23:00 and 01:00 are mathematically close.
+
+---
+
 ## Phases Overview
 
 | Phase | Description | Status |
@@ -171,5 +201,6 @@ python pipeline/extract_emotions.py
 | **Phase 2A** | Image Embeddings (CLIP) | ✅ Complete |
 | **Phase 2B** | Caption Embeddings (Sentence-BERT) | ✅ Complete |
 | **Phase 2C** | Emotion Extraction | ✅ Complete |
-| **Phase 2D** | Temporal Representation | 🔜 Planned |
+| **Phase 2D** | Temporal Representation | ✅ Complete |
 | **Phase 2E** | Location Clustering | 🔜 Planned |
+
