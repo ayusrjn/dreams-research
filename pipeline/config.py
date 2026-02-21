@@ -25,6 +25,12 @@ PLACE_IDS_PATH = PROCESSED_DIR / "place_ids.csv"
 MASTER_MANIFEST_PATH = PROCESSED_DIR / "master_manifest.parquet"
 FINAL_IMAGE_VECTORS_PATH = PROCESSED_DIR / "final_image_vectors.npy"
 FINAL_TEXT_VECTORS_PATH = PROCESSED_DIR / "final_text_vectors.npy"
+LOCATION_EMBEDDINGS_PATH = PROCESSED_DIR / "location_embeddings.npy"
+LOCATION_EMBEDDING_INDEX_PATH = PROCESSED_DIR / "location_embedding_index.json"
+
+# ChromaDB
+CHROMA_DB_DIR = PROCESSED_DIR / "chroma_db"
+LOCATION_COLLECTION_NAME = "location_descriptions"
 
 # Snapshots
 SNAPSHOTS_DIR = DATA_DIR / "snapshots"

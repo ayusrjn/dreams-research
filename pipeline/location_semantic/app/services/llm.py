@@ -51,21 +51,41 @@ def _build_prompt(
 Use this visual description to enrich your response — combine what is seen in the 
 image with the geographic data to paint a complete picture of where the user is."""
 
-    prompt = f"""You are a knowledgeable geographic assistant. Given the following location data
-and an optional image caption from a CLIP vision model, write a vivid and informative 
-3-5 sentence semantic description of this place. Describe what kind of area it is, 
-what a visitor might experience, and any notable geographic or cultural context. 
-Be specific and avoid generic filler.
 
-Coordinates: {lat}, {lon}
-Display name: {display_name}
-Address components:
-{chr(10).join(address_parts) if address_parts else "  (none available)"}
-Additional details:
-{chr(10).join(extras) if extras else "  (none available)"}{caption_section}
+    prompt = f"""
+You are a structured geographic classifier.
 
-Respond with ONLY the description, no preamble or labels."""
+Task:
+Convert the following structured metadata into a compact,
+standardized semantic description.
 
+Rules:
+- 1 sentence only.
+- Maximum 25 words.
+- No storytelling.
+- No sensory language.
+- No prestige framing.
+- No cultural commentary.
+- No geographic landmarks unless explicitly a landmark.
+- Use consistent phrasing across similar place types.
+
+Output format:
+"<primary_type> in a <environment_type> area. Key attributes: <comma-separated attributes>."
+
+If attributes are missing, omit the attributes section.
+
+Metadata:
+Type: {place_type}
+Category: {place_category}
+Address:
+{chr(10).join(address_parts) if address_parts else "None"}
+Extra tags:
+{chr(10).join([f"{k}: {v}" for k, v in extra_tags.items()]) if extra_tags else "None"}
+Caption summary:
+{caption if caption else "None"}
+
+Return ONLY the sentence.
+"""
     return prompt
 
 

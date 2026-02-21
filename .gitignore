@@ -7,9 +7,14 @@ env/
 .env
 
 # Data directory (large files - keep structure, ignore content)
+data/raw/*.jpg
+data/raw/*.jpeg
+data/raw/*.png
+data/raw/*.webp
 data/raw/images/**/*.jpg
 data/raw/images/**/*.png
 data/raw/images/**/*.webp
+data/raw/test_anchorage/
 data/snapshots/*/
 
 # Processed outputs (embeddings, indices, scores)
@@ -17,6 +22,8 @@ data/processed/*.npy
 data/processed/*.json
 data/processed/*.csv
 data/processed/*.parquet
+data/processed/chroma_db/
+data/processed/anchorage_cache/
 !data/processed/.gitkeep
 
 # Raw data with PII
@@ -38,3 +45,5 @@ export*.csv
 # MkDocs build output
 site/
 
+# Asciinema recordings
+*.cast
