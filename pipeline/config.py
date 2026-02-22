@@ -13,23 +13,16 @@ RAW_DIR = DATA_DIR / "raw"
 RAW_IMAGES_DIR = RAW_DIR / "images"
 RAW_METADATA_PATH = RAW_DIR / "metadata.json"
 
-# Phase 2: Processed data paths
+# Processed data directory
 PROCESSED_DIR = DATA_DIR / "processed"
-IMAGE_EMBEDDINGS_PATH = PROCESSED_DIR / "image_embeddings.npy"
-IMAGE_EMBEDDING_INDEX_PATH = PROCESSED_DIR / "image_embedding_index.json"
-TEXT_EMBEDDINGS_PATH = PROCESSED_DIR / "text_embeddings.npy"
-CAPTION_EMBEDDING_INDEX_PATH = PROCESSED_DIR / "caption_embedding_index.json"
-EMOTION_SCORES_PATH = PROCESSED_DIR / "emotion_scores.csv"
-TEMPORAL_FEATURES_PATH = PROCESSED_DIR / "temporal_features.csv"
-PLACE_IDS_PATH = PROCESSED_DIR / "place_ids.csv"
-MASTER_MANIFEST_PATH = PROCESSED_DIR / "master_manifest.parquet"
-FINAL_IMAGE_VECTORS_PATH = PROCESSED_DIR / "final_image_vectors.npy"
-FINAL_TEXT_VECTORS_PATH = PROCESSED_DIR / "final_text_vectors.npy"
-LOCATION_EMBEDDINGS_PATH = PROCESSED_DIR / "location_embeddings.npy"
-LOCATION_EMBEDDING_INDEX_PATH = PROCESSED_DIR / "location_embedding_index.json"
+
+# SQLite database
+DREAMS_DB_PATH = PROCESSED_DIR / "dreams.db"
 
 # ChromaDB
 CHROMA_DB_DIR = PROCESSED_DIR / "chroma_db"
+IMAGE_COLLECTION_NAME = "image_embeddings"
+CAPTION_COLLECTION_NAME = "caption_embeddings"
 LOCATION_COLLECTION_NAME = "location_descriptions"
 
 # Snapshots
@@ -58,12 +51,8 @@ D1_SCHEMA = {
     ]
 }
 
-# Emotion representation schema
-EMOTION_SCHEMA = {
-    "valence": float,
-    "arousal": float,
-    "confidence": float
-}
+# Discrete emotion labels
+DISCRETE_EMOTIONS = ["anger", "disgust", "fear", "joy", "neutral", "sadness", "surprise"]
 
 # Location clustering parameters (Phase 2E)
 # Earth radius ≈ 6,371 km; eps in radians = distance / radius

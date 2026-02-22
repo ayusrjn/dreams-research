@@ -21,10 +21,14 @@ Output Structure:
 import os
 import json
 import shutil
+import sys
 import requests
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
+
+sys.path.insert(0, str(Path(__file__).parent))
+from db import init_db
 
 
 # Configuration - Update these with your actual values
@@ -269,11 +273,32 @@ def main():
     print("\n📦 Step 3: Creating snapshot...")
     snapshot = create_snapshot(processed_records, user_stats)
     
-    # Step 4: Save metadata
+    # Step 4: Save metadata (raw JSON preserved for snapshot freezing)
     save_metadata(snapshot)
     
-    # Step 5: Freeze snapshot
-    print("\n❄️  Step 5: Freezing snapshot...")
+    # Step 5: Insert into SQLite
+    print("\n🗄️  Step 5: Inserting records into SQLite...")
+    conn = init_db()
+    conn.execute("DELETE FROM memories")  # Fresh pull replaces all
+    for rec in processed_records:
+        conn.execute(
+            """INSERT OR REPLACE INTO memories
+               (id, user_id, caption, timestamp, lat, lon,
+                image_url, local_image, snapshot_id, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                rec["id"], rec["user_id"], rec["caption"],
+                rec["timestamp"], rec["lat"], rec["lon"],
+                rec["image_url"], rec["local_image"],
+                snapshot["snapshot_id"], rec["created_at"],
+            ),
+        )
+    conn.commit()
+    print(f"   Inserted {len(processed_records)} records into memories table")
+    conn.close()
+    
+    # Step 6: Freeze snapshot
+    print("\n❄️  Step 6: Freezing snapshot...")
     snapshot_path = freeze_snapshot(snapshot)
     
     # Summary
@@ -283,6 +308,7 @@ def main():
     print(f"   📊 Records: {snapshot['record_count']}")
     print(f"   👥 Users: {snapshot['user_count']}")
     print(f"   📁 Raw data: {RAW_DIR}")
+    print(f"   🗄️  Database: dreams.db")
     print(f"   ❄️  Snapshot: {snapshot_path}")
     print("\nThis snapshot is the **experiment boundary**.")
 

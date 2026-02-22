@@ -4,11 +4,7 @@ Phase 2B: Caption Embedding Extraction
 
 Extracts Sentence-BERT embeddings from memory captions.
 Uses the frozen snapshot from Phase 1 as input.
-
-Output:
-    data/processed/
-        text_embeddings.npy           - (N, 384) array of embeddings
-        caption_embedding_index.json  - Record ID to embedding index mapping
+Stores embeddings in ChromaDB `caption_embeddings` collection.
 """
 
 import json
@@ -23,11 +19,10 @@ from sentence_transformers import SentenceTransformer
 sys.path.insert(0, str(Path(__file__).parent))
 from config import (
     RAW_METADATA_PATH,
-    PROCESSED_DIR,
-    TEXT_EMBEDDINGS_PATH,
-    CAPTION_EMBEDDING_INDEX_PATH,
     SENTENCE_BERT_MODEL,
+    CAPTION_COLLECTION_NAME,
 )
+from db import get_collection
 
 
 def load_metadata() -> dict:
@@ -50,22 +45,11 @@ def preprocess_caption(text: str) -> str:
         - Normalize Unicode (NFC)
         - Keep punctuation
         - Keep casing (MiniLM is case-sensitive)
-    
-    Args:
-        text: Raw caption text
-        
-    Returns:
-        Preprocessed caption string
     """
     if not text:
         return ""
-    
-    # Normalize Unicode to NFC form
     text = unicodedata.normalize("NFC", text)
-    
-    # Strip leading/trailing whitespace
     text = text.strip()
-    
     return text
 
 
@@ -76,26 +60,23 @@ def load_sentence_bert() -> SentenceTransformer:
     return model
 
 
-def extract_embeddings(metadata: dict, model: SentenceTransformer) -> tuple[np.ndarray, dict]:
+def extract_embeddings(metadata: dict, model: SentenceTransformer) -> tuple[list[dict], np.ndarray]:
     """
     Extract caption embeddings for all records with valid captions.
     
     Returns:
-        Tuple of (embeddings array, index mapping)
+        Tuple of (record_info_list, embeddings array)
     """
     records = metadata.get("records", [])
     captions = []
-    record_ids = []
-    index_mapping = {}
+    record_infos = []
     
     print(f"📝 Processing {len(records)} records...")
     
-    # Collect and preprocess captions
     for record in records:
         record_id = record.get("id")
         raw_caption = record.get("caption", "")
         
-        # Skip redacted or empty captions
         if not raw_caption or raw_caption == "[REDACTED]":
             print(f"   ⚠️  Record {record_id}: No valid caption (skipped)")
             continue
@@ -107,11 +88,15 @@ def extract_embeddings(metadata: dict, model: SentenceTransformer) -> tuple[np.n
             continue
         
         captions.append(caption)
-        record_ids.append(record)
+        record_infos.append({
+            "id": str(record_id),
+            "user_id": record.get("user_id"),
+            "caption": caption,
+        })
         print(f"   ✅ Record {record_id}: '{caption[:50]}{'...' if len(caption) > 50 else ''}'")
     
     if not captions:
-        return np.array([]), {}
+        return [], np.array([])
     
     # Batch encode all captions
     print(f"\n🧠 Encoding {len(captions)} captions...")
@@ -122,31 +107,26 @@ def extract_embeddings(metadata: dict, model: SentenceTransformer) -> tuple[np.n
         normalize_embeddings=True  # Unit-normalized vectors per plan.md
     )
     
-    # Build index mapping
-    for idx, record in enumerate(record_ids):
-        record_id = str(record.get("id"))
-        index_mapping[record_id] = {
-            "embedding_index": idx,
-            "user_id": record.get("user_id"),
-            "caption_preview": captions[idx][:100],
-        }
-    
-    return embeddings, index_mapping
+    return record_infos, embeddings
 
 
-def save_outputs(embeddings: np.ndarray, index_mapping: dict) -> None:
-    """Save embeddings and index mapping."""
-    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+def store_embeddings(record_infos: list[dict], embeddings: np.ndarray) -> None:
+    """Store embeddings in ChromaDB caption_embeddings collection."""
+    collection = get_collection(CAPTION_COLLECTION_NAME)
     
-    # Save embeddings
-    np.save(TEXT_EMBEDDINGS_PATH, embeddings)
-    print(f"💾 Embeddings saved: {TEXT_EMBEDDINGS_PATH}")
-    print(f"   Shape: {embeddings.shape}")
+    ids = [r["id"] for r in record_infos]
+    documents = [r["caption"] for r in record_infos]
+    metadatas = [{"user_id": r["user_id"]} for r in record_infos]
     
-    # Save index mapping
-    with open(CAPTION_EMBEDDING_INDEX_PATH, "w") as f:
-        json.dump(index_mapping, f, indent=2)
-    print(f"💾 Index saved: {CAPTION_EMBEDDING_INDEX_PATH}")
+    collection.upsert(
+        ids=ids,
+        embeddings=embeddings.tolist(),
+        documents=documents,
+        metadatas=metadatas,
+    )
+    
+    print(f"💾 Stored {len(ids)} embeddings in ChromaDB ({CAPTION_COLLECTION_NAME})")
+    print(f"   Collection size: {collection.count()}")
 
 
 def main():
@@ -168,16 +148,16 @@ def main():
     
     # Step 3: Extract embeddings
     print("\n🔍 Step 3: Extracting embeddings...")
-    embeddings, index_mapping = extract_embeddings(metadata, model)
+    record_infos, embeddings = extract_embeddings(metadata, model)
     
     if len(embeddings) == 0:
         print("\n⚠️  No embeddings extracted. Check your captions.")
         print("   Note: [REDACTED] captions are skipped.")
         return
     
-    # Step 4: Save outputs
-    print("\n💾 Step 4: Saving outputs...")
-    save_outputs(embeddings, index_mapping)
+    # Step 4: Store in ChromaDB
+    print("\n💾 Step 4: Storing in ChromaDB...")
+    store_embeddings(record_infos, embeddings)
     
     # Summary
     print("\n" + "=" * 60)
@@ -185,7 +165,7 @@ def main():
     print("=" * 60)
     print(f"   📊 Embeddings: {embeddings.shape[0]} captions")
     print(f"   📐 Dimensions: {embeddings.shape[1]}")
-    print(f"   📁 Output: {PROCESSED_DIR}")
+    print(f"   💾 Collection: {CAPTION_COLLECTION_NAME}")
 
 
 if __name__ == "__main__":

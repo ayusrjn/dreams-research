@@ -98,28 +98,44 @@ pip install -r requirements.txt
 ### Reproduction
 
 ```bash
-# 1. Pull Data
+# 1. Pull Data (→ metadata.json + SQLite memories table)
 python pipeline/pull_data.py
 
 # 2. Extract Features
-python pipeline/extract_image_embeddings.py
-python pipeline/extract_caption_embeddings.py
-python pipeline/extract_emotions.py
-python pipeline/extract_temporal_features.py
-python pipeline/extract_location_clusters.py
+python pipeline/extract_image_embeddings.py    # → ChromaDB: image_embeddings
+python pipeline/extract_caption_embeddings.py  # → ChromaDB: caption_embeddings
+python pipeline/extract_emotions.py            # → SQLite: emotion_scores
+python pipeline/extract_temporal_features.py   # → SQLite: temporal_features
+python pipeline/extract_location_clusters.py   # → SQLite: place_assignments
 
-# 3. Fuse
+# 3. Verify (master_manifest is a SQL VIEW — always in sync)
 python pipeline/create_master_manifest.py
+
+# Optional: export to Parquet for backward compatibility
+python pipeline/create_master_manifest.py --export
 ```
 
 ---
 
 ##  Data Schema
 
-| File | Shape | Description |
+### SQLite (`data/processed/dreams.db`)
+
+| Table / View | Description |
+| :--- | :--- |
+| `memories` | Raw record metadata (user, caption, timestamp, GPS, image path). |
+| `emotion_scores` | Valence, arousal, and 7 discrete emotion probabilities ($C_t$). |
+| `temporal_features` | Circadian sin/cos encoding + relative epoch (days since first entry). |
+| `place_assignments` | DBSCAN place IDs, snapped coordinates, cluster centroids. |
+| `master_manifest` | **VIEW** joining all tables — the unified research dataset. |
+
+### ChromaDB (`data/processed/chroma_db/`)
+
+| Collection | Shape | Description |
 | :--- | :--- | :--- |
-| `master_manifest.parquet` | $(N, M)$ | Metadata, Place IDs, Emotion Scores ($C_t$). |
-| `final_image_vectors.npy` | $(N, 512)$ | CLIP Visual Embeddings. |
-| `final_text_vectors.npy` | $(N, 384)$ | S-BERT Narrative Embeddings. |
+| `image_embeddings` | $(N, 512)$ | CLIP Visual Embeddings. |
+| `caption_embeddings` | $(N, 384)$ | S-BERT Narrative Embeddings. |
+| `location_descriptions` | $(N, 384)$ | S-BERT Location Semantic Embeddings. |
 
 ---
+

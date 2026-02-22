@@ -32,10 +32,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from config import (
     SENTENCE_BERT_MODEL,
-    CHROMA_DB_DIR,
     PROCESSED_DIR,
     LOCATION_COLLECTION_NAME,
 )
+from db import get_collection
 from location_semantic import (
     reverse_geocode,
     generate_description,
@@ -44,7 +44,6 @@ from location_semantic import (
 )
 from location_embeddings import (
     get_image_caption,
-    get_chroma_collection,
     store_in_chromadb,
     cluster_embeddings,
     embed_descriptions,
@@ -309,7 +308,7 @@ def main():
 
     # --- Step 3: ChromaDB ---
     print(f"\n💾  Step 3/5: Storing in ChromaDB ({LOCATION_COLLECTION_NAME})...")
-    collection = get_chroma_collection(LOCATION_COLLECTION_NAME)
+    collection = get_collection(LOCATION_COLLECTION_NAME)
     store_in_chromadb(collection, results, embeddings)
     print(f"   Collection size: {collection.count()}")
 

@@ -4,11 +4,7 @@ Phase 2A: Image Embedding Extraction
 
 Extracts CLIP image embeddings from downloaded memory images.
 Uses the frozen snapshot from Phase 1 as input.
-
-Output:
-    data/processed/
-        image_embeddings.npy      - (N, 512) array of embeddings
-        image_embedding_index.json - Record ID to embedding index mapping
+Stores embeddings in ChromaDB `image_embeddings` collection.
 """
 
 import json
@@ -26,13 +22,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config import (
     RAW_METADATA_PATH,
     RAW_IMAGES_DIR,
-    PROCESSED_DIR,
-    IMAGE_EMBEDDINGS_PATH,
     CLIP_MODEL,
+    IMAGE_COLLECTION_NAME,
 )
-
-# Output paths
-EMBEDDING_INDEX_PATH = PROCESSED_DIR / "image_embedding_index.json"
+from db import get_collection
 
 
 def load_metadata() -> dict:
@@ -57,16 +50,16 @@ def load_clip_model():
     return model, preprocess, device
 
 
-def extract_embeddings(metadata: dict, model, preprocess, device) -> tuple[np.ndarray, dict]:
+def extract_embeddings(metadata: dict, model, preprocess, device) -> tuple[list[dict], np.ndarray]:
     """
     Extract image embeddings for all valid images.
     
     Returns:
-        Tuple of (embeddings array, index mapping)
+        Tuple of (record_info_list, embeddings array)
     """
     records = metadata.get("records", [])
     embeddings = []
-    index_mapping = {}
+    record_infos = []
     
     print(f"📷 Processing {len(records)} records...")
     
@@ -92,10 +85,10 @@ def extract_embeddings(metadata: dict, model, preprocess, device) -> tuple[np.nd
                 continue
         
         try:
-            # Load and preprocess image - ensure data is loaded before file closes
+            # Load and preprocess image
             with Image.open(image_path) as img:
                 image = img.convert("RGB")
-                image.load()  # Force pixel data to be read while file is open
+                image.load()
             image_input = preprocess(image).unsqueeze(0).to(device)
             
             # Extract embedding
@@ -103,14 +96,12 @@ def extract_embeddings(metadata: dict, model, preprocess, device) -> tuple[np.nd
                 embedding = model.encode_image(image_input)
                 embedding = embedding.cpu().numpy().flatten()
             
-            # Store embedding and update index
-            embedding_idx = len(embeddings)
             embeddings.append(embedding)
-            index_mapping[str(record_id)] = {
-                "embedding_index": embedding_idx,
+            record_infos.append({
+                "id": str(record_id),
                 "user_id": record.get("user_id"),
                 "local_image": local_image,
-            }
+            })
             
             print(f"   ✅ Record {record_id}: Extracted ({embedding.shape[0]} dims)")
             
@@ -119,24 +110,26 @@ def extract_embeddings(metadata: dict, model, preprocess, device) -> tuple[np.nd
             continue
     
     if not embeddings:
-        return np.array([]), {}
+        return [], np.array([])
     
-    return np.stack(embeddings), index_mapping
+    return record_infos, np.stack(embeddings)
 
 
-def save_outputs(embeddings: np.ndarray, index_mapping: dict) -> None:
-    """Save embeddings and index mapping."""
-    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+def store_embeddings(record_infos: list[dict], embeddings: np.ndarray) -> None:
+    """Store embeddings in ChromaDB image_embeddings collection."""
+    collection = get_collection(IMAGE_COLLECTION_NAME)
     
-    # Save embeddings
-    np.save(IMAGE_EMBEDDINGS_PATH, embeddings)
-    print(f"💾 Embeddings saved: {IMAGE_EMBEDDINGS_PATH}")
-    print(f"   Shape: {embeddings.shape}")
+    ids = [r["id"] for r in record_infos]
+    metadatas = [{"user_id": r["user_id"], "local_image": r["local_image"]} for r in record_infos]
     
-    # Save index mapping
-    with open(EMBEDDING_INDEX_PATH, "w") as f:
-        json.dump(index_mapping, f, indent=2)
-    print(f"💾 Index saved: {EMBEDDING_INDEX_PATH}")
+    collection.upsert(
+        ids=ids,
+        embeddings=embeddings.tolist(),
+        metadatas=metadatas,
+    )
+    
+    print(f"💾 Stored {len(ids)} embeddings in ChromaDB ({IMAGE_COLLECTION_NAME})")
+    print(f"   Collection size: {collection.count()}")
 
 
 def main():
@@ -158,15 +151,15 @@ def main():
     
     # Step 3: Extract embeddings
     print("\n🔍 Step 3: Extracting embeddings...")
-    embeddings, index_mapping = extract_embeddings(metadata, model, preprocess, device)
+    record_infos, embeddings = extract_embeddings(metadata, model, preprocess, device)
     
     if len(embeddings) == 0:
         print("\n⚠️  No embeddings extracted. Check your images.")
         return
     
-    # Step 4: Save outputs
-    print("\n💾 Step 4: Saving outputs...")
-    save_outputs(embeddings, index_mapping)
+    # Step 4: Store in ChromaDB
+    print("\n💾 Step 4: Storing in ChromaDB...")
+    store_embeddings(record_infos, embeddings)
     
     # Summary
     print("\n" + "=" * 60)
@@ -174,7 +167,7 @@ def main():
     print("=" * 60)
     print(f"   📊 Embeddings: {embeddings.shape[0]} images")
     print(f"   📐 Dimensions: {embeddings.shape[1]}")
-    print(f"   📁 Output: {PROCESSED_DIR}")
+    print(f"   💾 Collection: {IMAGE_COLLECTION_NAME}")
 
 
 if __name__ == "__main__":

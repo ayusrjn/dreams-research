@@ -26,7 +26,6 @@ import sys
 import time
 from pathlib import Path
 
-import chromadb
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import DBSCAN
@@ -37,13 +36,10 @@ from google import genai
 from config import (
     RAW_IMAGES_DIR,
     RAW_METADATA_PATH,
-    PROCESSED_DIR,
     SENTENCE_BERT_MODEL,
-    CHROMA_DB_DIR,
     LOCATION_COLLECTION_NAME,
-    LOCATION_EMBEDDINGS_PATH,
-    LOCATION_EMBEDDING_INDEX_PATH,
 )
+from db import get_collection
 from location_semantic import (
     reverse_geocode,
     generate_description,
@@ -206,19 +202,8 @@ def embed_descriptions(
 # 4. ChromaDB storage
 # ---------------------------------------------------------------------------
 
-def get_chroma_collection(collection_name: str) -> chromadb.Collection:
-    """Get or create a persistent ChromaDB collection."""
-    CHROMA_DB_DIR.mkdir(parents=True, exist_ok=True)
-    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
-    collection = client.get_or_create_collection(
-        name=collection_name,
-        metadata={"hnsw:space": "cosine"},
-    )
-    return collection
-
-
 def store_in_chromadb(
-    collection: chromadb.Collection,
+    collection,
     results: list[dict],
     embeddings: np.ndarray,
 ) -> None:
@@ -264,8 +249,6 @@ def cluster_embeddings(
     Returns:
         Array of cluster labels (-1 = noise / unclustered).
     """
-    # Cosine distance = 1 - cosine_similarity.  For unit-normed vectors:
-    # cosine_similarity = dot product, so distance = 1 - X @ X^T
     distance_matrix = 1.0 - np.dot(embeddings, embeddings.T)
     np.fill_diagonal(distance_matrix, 0.0)
     distance_matrix = np.clip(distance_matrix, 0.0, 2.0)
@@ -283,7 +266,6 @@ def cluster_embeddings(
     print(f"   Clusters found: {n_clusters}")
     print(f"   Unclustered (noise): {n_noise}")
 
-    # Print cluster membership
     for cluster_id in sorted(set(labels)):
         members = [
             results[i] for i, l in enumerate(labels) if l == cluster_id
@@ -301,7 +283,7 @@ def cluster_embeddings(
 # ---------------------------------------------------------------------------
 
 def query_similar(
-    collection: chromadb.Collection,
+    collection,
     query_text: str,
     model: SentenceTransformer,
     n_results: int = 5,
@@ -333,35 +315,6 @@ def query_similar(
         print(f"      Location:    {meta.get('geocode_display_name', 'N/A')}")
         print(f"      Description: {doc}")
         print()
-
-
-# ---------------------------------------------------------------------------
-# 7. File outputs
-# ---------------------------------------------------------------------------
-
-def save_outputs(
-    results: list[dict], embeddings: np.ndarray, labels: np.ndarray
-) -> None:
-    """Save embeddings array and an index mapping to disk."""
-    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-
-    np.save(LOCATION_EMBEDDINGS_PATH, embeddings)
-    print(f"   Embeddings saved: {LOCATION_EMBEDDINGS_PATH}")
-    print(f"   Shape: {embeddings.shape}")
-
-    index = {}
-    for idx, r in enumerate(results):
-        index[r["id"]] = {
-            "embedding_index": idx,
-            "cluster_label": int(labels[idx]),
-            "lat": r["lat"],
-            "lon": r["lon"],
-            "description_preview": r["description"][:120],
-        }
-
-    with open(LOCATION_EMBEDDING_INDEX_PATH, "w") as f:
-        json.dump(index, f, indent=2)
-    print(f"   Index saved: {LOCATION_EMBEDDING_INDEX_PATH}")
 
 
 # ---------------------------------------------------------------------------
@@ -420,7 +373,7 @@ def main():
         print(f"   Loading Sentence-BERT model: {SENTENCE_BERT_MODEL}")
         sbert = SentenceTransformer(SENTENCE_BERT_MODEL)
 
-        collection = get_chroma_collection(LOCATION_COLLECTION_NAME)
+        collection = get_collection(LOCATION_COLLECTION_NAME)
         if collection.count() == 0:
             print("   ChromaDB collection is empty. Run --batch first.")
             sys.exit(1)
@@ -433,7 +386,6 @@ def main():
         api_key = get_gemini_api_key()
         user_agent = get_nominatim_user_agent()
 
-        # Generate a unique ID for this entry
         unique_seed = f"{args.lat}:{args.lon}:{time.time()}"
         entry_id = hashlib.md5(unique_seed.encode()).hexdigest()[:12]
 
@@ -445,7 +397,6 @@ def main():
         }
 
         print("📷 Single-Image Mode\n")
-        # Override image lookup — use the CLI path directly
         print(f"  [1/4] Captioning image: {args.image}")
         caption = get_image_caption(args.image, api_key)
         print(f"        Caption: {caption}")
@@ -468,7 +419,7 @@ def main():
         embedding = sbert.encode(
             [description], normalize_embeddings=True
         )
-        collection = get_chroma_collection(LOCATION_COLLECTION_NAME)
+        collection = get_collection(LOCATION_COLLECTION_NAME)
         store_in_chromadb(
             collection,
             [
@@ -492,7 +443,6 @@ def main():
 
     # --- Batch mode -------------------------------------------------------
     if not args.batch:
-        # Default to batch if no flags given
         print("No mode specified, defaulting to --batch.\n")
 
     api_key = get_gemini_api_key()
@@ -538,7 +488,7 @@ def main():
 
     # Store in ChromaDB
     print(f"\n💾 Step 4: Storing in ChromaDB ({LOCATION_COLLECTION_NAME})...")
-    collection = get_chroma_collection(LOCATION_COLLECTION_NAME)
+    collection = get_collection(LOCATION_COLLECTION_NAME)
     store_in_chromadb(collection, results, embeddings)
     print(f"   Collection size: {collection.count()}")
 
@@ -546,12 +496,8 @@ def main():
     print(f"\n🔗 Step 5: Clustering (DBSCAN eps={args.eps}, min_samples={args.min_samples})...")
     labels = cluster_embeddings(embeddings, results, eps=args.eps, min_samples=args.min_samples)
 
-    # Save files
-    print(f"\n💾 Step 6: Saving outputs...")
-    save_outputs(results, embeddings, labels)
-
     # Query demo
-    print(f"\n🔍 Step 7: Query demo...")
+    print(f"\n🔍 Step 6: Query demo...")
     if len(results) >= 1:
         sample_desc = results[0]["description"]
         query_similar(collection, sample_desc, sbert, n_results=3)
@@ -564,9 +510,7 @@ def main():
     print(f"   Records processed: {len(results)}")
     print(f"   Embedding dims:    {embeddings.shape[1]}")
     print(f"   Clusters found:    {n_clusters}")
-    print(f"   ChromaDB path:     {CHROMA_DB_DIR}")
-    print(f"   Embeddings file:   {LOCATION_EMBEDDINGS_PATH}")
-    print(f"   Index file:        {LOCATION_EMBEDDING_INDEX_PATH}")
+    print(f"   ChromaDB collection: {LOCATION_COLLECTION_NAME}")
 
 
 if __name__ == "__main__":

@@ -1,215 +1,126 @@
 #!/usr/bin/env python3
 """
-Grand Fusion: Create Master Manifest & Synchronize Vectors
+Grand Fusion: Master Manifest Verification & Export
 
-Merges all feature files into a single Master Manifest and aligns
-high-dimensional vectors to match the sorted manifest.
+The master_manifest is now a SQL VIEW that automatically joins all tables.
+This script verifies integrity and optionally exports to Parquet.
 
-Inputs:
-    - data/raw/metadata.json
-    - data/processed/emotion_scores.csv
-    - data/processed/temporal_features.csv
-    - data/processed/place_ids.csv
-    - data/processed/image_embeddings.npy + index
-    - data/processed/text_embeddings.npy + index
-
-Outputs:
-    - data/processed/master_manifest.parquet
-    - data/processed/final_image_vectors.npy
-    - data/processed/final_text_vectors.npy
+Usage:
+    python pipeline/create_master_manifest.py                # verify only
+    python pipeline/create_master_manifest.py --export       # verify + export to Parquet
 """
 
-import json
+import argparse
 import sys
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-
-# Import config from pipeline
 sys.path.insert(0, str(Path(__file__).parent))
-from config import (
-    RAW_METADATA_PATH,
-    EMOTION_SCORES_PATH,
-    TEMPORAL_FEATURES_PATH,
-    PLACE_IDS_PATH,
-    IMAGE_EMBEDDINGS_PATH,
-    IMAGE_EMBEDDING_INDEX_PATH,
-    TEXT_EMBEDDINGS_PATH,
-    CAPTION_EMBEDDING_INDEX_PATH,
-    MASTER_MANIFEST_PATH,
-    FINAL_IMAGE_VECTORS_PATH,
-    FINAL_TEXT_VECTORS_PATH,
-)
+from config import PROCESSED_DIR, IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME
+from db import init_db, get_collection
 
 
-def load_data():
-    """Load all input data files."""
-    print("📂 Loading input files...")
+def verify_manifest():
+    """Verify the master_manifest VIEW and underlying tables."""
+    conn = init_db()
     
-    # 1. Metadata (Backbone)
-    with open(RAW_METADATA_PATH) as f:
-        metadata = json.load(f)
-    df_meta = pd.DataFrame(metadata["records"])
-    print(f"   Metadata: {len(df_meta)} records")
+    print("📊 Table Row Counts:")
+    tables = ["memories", "emotion_scores", "temporal_features", "place_assignments"]
+    counts = {}
+    for table in tables:
+        count = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
+        counts[table] = count
+        print(f"   {table}: {count}")
     
-    # 2. Features (CSVs)
-    df_emotion = pd.read_csv(EMOTION_SCORES_PATH)
-    df_temporal = pd.read_csv(TEMPORAL_FEATURES_PATH)
-    df_place = pd.read_csv(PLACE_IDS_PATH)
+    # Master manifest view
+    manifest_count = conn.execute("SELECT count(*) FROM master_manifest").fetchone()[0]
+    print(f"\n   master_manifest (VIEW): {manifest_count}")
     
-    print(f"   Emotion: {len(df_emotion)} rows")
-    print(f"   Temporal: {len(df_temporal)} rows")
-    print(f"   Place: {len(df_place)} rows")
+    # Check consistency
+    print("\n🔍 Integrity Checks:")
     
-    # 3. Vectors (NPY + JSON)
-    img_vecs = np.load(IMAGE_EMBEDDINGS_PATH)
-    with open(IMAGE_EMBEDDING_INDEX_PATH) as f:
-        img_idx = json.load(f)
-        
-    txt_vecs = np.load(TEXT_EMBEDDINGS_PATH)
-    with open(CAPTION_EMBEDDING_INDEX_PATH) as f:
-        txt_idx = json.load(f)
-        
-    print(f"   Image Vectors: {img_vecs.shape}")
-    print(f"   Text Vectors: {txt_vecs.shape}")
+    # 1. Manifest should match memories count
+    if manifest_count == counts["memories"]:
+        print(f"   ✅ Manifest rows ({manifest_count}) = Memories rows ({counts['memories']})")
+    else:
+        print(f"   ❌ Manifest rows ({manifest_count}) ≠ Memories rows ({counts['memories']})")
     
-    return df_meta, df_emotion, df_temporal, df_place, img_vecs, img_idx, txt_vecs, txt_idx
+    # 2. Check for NULLs in key columns
+    null_checks = {
+        "valence": "SELECT count(*) FROM master_manifest WHERE valence IS NULL",
+        "arousal": "SELECT count(*) FROM master_manifest WHERE arousal IS NULL",
+        "place_id": "SELECT count(*) FROM master_manifest WHERE place_id IS NULL",
+        "sin_hour": "SELECT count(*) FROM master_manifest WHERE sin_hour IS NULL",
+    }
+    
+    print("\n   NULL counts in master_manifest:")
+    for col, query in null_checks.items():
+        null_count = conn.execute(query).fetchone()[0]
+        status = "⚠️" if null_count > 0 else "✅"
+        print(f"   {status}  {col}: {null_count} NULLs")
+    
+    # 3. Check ChromaDB collections
+    print("\n📦 ChromaDB Collections:")
+    for coll_name in [IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME]:
+        collection = get_collection(coll_name)
+        coll_count = collection.count()
+        print(f"   {coll_name}: {coll_count} vectors")
+    
+    # 4. Sample row
+    print("\n📋 Sample Row (first record):")
+    row = conn.execute("SELECT * FROM master_manifest LIMIT 1").fetchone()
+    if row:
+        columns = [desc[0] for desc in conn.execute("SELECT * FROM master_manifest LIMIT 0").description]
+        for col in columns:
+            val = row[columns.index(col)]
+            if val is not None:
+                print(f"   {col}: {val}")
+    else:
+        print("   (no records)")
+    
+    conn.close()
+    return manifest_count > 0
 
 
-def merge_manifest(df_meta, df_emotion, df_temporal, df_place):
-    """Merge all dataframes into a single master manifest."""
-    print("\n🔗 Merging manifest...")
+def export_parquet():
+    """Export master_manifest VIEW to a Parquet file for backward compatibility."""
+    try:
+        import pandas as pd
+    except ImportError:
+        print("❌ pandas is required for Parquet export: pip install pandas pyarrow")
+        return
     
-    # Ensure ID columns are consistent (int)
-    df_meta["id"] = df_meta["id"].astype(int)
-    df_emotion["id"] = df_emotion["id"].astype(int)
-    df_temporal["id"] = df_temporal["id"].astype(int)
-    df_place["id"] = df_place["id"].astype(int)
+    conn = init_db()
+    df = pd.read_sql_query("SELECT * FROM master_manifest", conn)
+    conn.close()
     
-    # Merge
-    # Start with metadata
-    df_master = df_meta.copy()
-    
-    # Merge Emotion (drop user_id to avoid duplicates)
-    df_master = df_master.merge(
-        df_emotion.drop(columns=["user_id"], errors="ignore"),
-        on="id",
-        how="left"
-    )
-    
-    # Merge Temporal
-    df_master = df_master.merge(
-        df_temporal.drop(columns=["user_id"], errors="ignore"),
-        on="id",
-        how="left"
-    )
-    
-    # Merge Place
-    df_master = df_master.merge(
-        df_place.drop(columns=["user_id", "raw_lat", "raw_lon"], errors="ignore"),
-        on="id",
-        how="left"
-    )
-    
-    # Sort by ID
-    df_master = df_master.sort_values("id").reset_index(drop=True)
-    
-    print(f"   Master Manifest: {len(df_master)} rows")
-    return df_master
-
-
-def align_vectors(df_master, vectors, index_map, vector_name):
-    """
-    Align vectors to match the order of the master manifest.
-    
-    Args:
-        df_master: Sorted master dataframe
-        vectors: Raw numpy array of vectors
-        index_map: Dict mapping record_id (str) -> {embedding_index: int}
-        vector_name: Name for logging
-        
-    Returns:
-        Aligned numpy array of vectors
-    """
-    print(f"\n📐 Aligning {vector_name}...")
-    
-    aligned_vectors = []
-    dim = vectors.shape[1]
-    missing_count = 0
-    
-    for _, row in df_master.iterrows():
-        record_id = str(row["id"])
-        
-        if record_id in index_map:
-            idx = index_map[record_id]["embedding_index"]
-            vec = vectors[idx]
-        else:
-            # Handle missing vectors (e.g. text for redacted captions)
-            # Use zero vector or NaN? Zero vector is safer for matrix ops, 
-            # but we should track that it's missing.
-            # For now, let's use Zero vector.
-            vec = np.zeros(dim)
-            missing_count += 1
-            
-        aligned_vectors.append(vec)
-    
-    aligned_vectors = np.stack(aligned_vectors)
-    
-    if missing_count > 0:
-        print(f"   ⚠️  {missing_count} records missing {vector_name} (filled with zeros)")
-    
-    print(f"   Aligned Shape: {aligned_vectors.shape}")
-    return aligned_vectors
-
-
-def normalize_columns(df):
-    """Normalize specific columns."""
-    print("\n⚖️  Normalizing columns...")
-    
-    # Place ID to categorical
-    if "place_id" in df.columns:
-        df["place_id"] = df["place_id"].astype("category")
-        print("   Converted place_id to categorical")
-        
-    # Valence/Arousal are already 0-1 from the extraction script?
-    # Let's check ranges just in case, but usually they are.
-    # If they are not, we should scale them. 
-    # Based on plan.md, they are probabilities or 0-1 scores.
-    
-    return df
+    output_path = PROCESSED_DIR / "master_manifest.parquet"
+    df.to_parquet(output_path, index=False)
+    print(f"\n💾 Exported to: {output_path}")
+    print(f"   Shape: {df.shape}")
 
 
 def main():
-    # 1. Load Data
-    (df_meta, df_emotion, df_temporal, df_place, 
-     img_vecs, img_idx, txt_vecs, txt_idx) = load_data()
+    parser = argparse.ArgumentParser(description="Master Manifest Verification & Export")
+    parser.add_argument("--export", action="store_true", help="Export VIEW to Parquet file")
+    args = parser.parse_args()
     
-    # 2. Merge Manifest
-    df_master = merge_manifest(df_meta, df_emotion, df_temporal, df_place)
+    print("=" * 60)
+    print("DREAMS Research - Grand Fusion: Master Manifest")
+    print("=" * 60)
+    print()
     
-    # 3. Normalize
-    df_master = normalize_columns(df_master)
+    ok = verify_manifest()
     
-    # 4. Align Vectors
-    final_img_vecs = align_vectors(df_master, img_vecs, img_idx, "Image Vectors")
-    final_txt_vecs = align_vectors(df_master, txt_vecs, txt_idx, "Text Vectors")
+    if args.export:
+        print("\n📤 Exporting to Parquet...")
+        export_parquet()
     
-    # 5. Save Outputs
-    print("\n💾 Saving outputs...")
-    
-    # Save Parquet
-    df_master.to_parquet(MASTER_MANIFEST_PATH, index=False)
-    print(f"   Manifest: {MASTER_MANIFEST_PATH}")
-    
-    # Save Vectors
-    np.save(FINAL_IMAGE_VECTORS_PATH, final_img_vecs)
-    print(f"   Image Vectors: {FINAL_IMAGE_VECTORS_PATH}")
-    
-    np.save(FINAL_TEXT_VECTORS_PATH, final_txt_vecs)
-    print(f"   Text Vectors: {FINAL_TEXT_VECTORS_PATH}")
-    
-    print("\n✅ Grand Fusion Complete!")
+    print("\n" + "=" * 60)
+    if ok:
+        print("✅ Grand Fusion Verification Complete!")
+    else:
+        print("⚠️  No records found. Run the pipeline first.")
+    print("=" * 60)
 
 
 if __name__ == "__main__":

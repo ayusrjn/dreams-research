@@ -6,9 +6,7 @@ Extracts both:
 1. Valence/arousal scores (dimensional)
 2. Discrete emotion probabilities (joy, sadness, fear, anger, neutral, etc.)
 
-Output:
-    data/processed/
-        emotion_scores.csv - All emotion features per record
+Stores results in the SQLite `emotion_scores` table.
 """
 
 import json
@@ -22,13 +20,11 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipe
 sys.path.insert(0, str(Path(__file__).parent))
 from config import (
     RAW_METADATA_PATH,
-    PROCESSED_DIR,
-    EMOTION_SCORES_PATH,
     EMOTION_MODEL,
     DISCRETE_EMOTION_MODEL,
+    DISCRETE_EMOTIONS,
 )
-
-DISCRETE_EMOTIONS = ["anger", "disgust", "fear", "joy", "neutral", "sadness", "surprise"]
+from db import init_db
 
 
 def load_metadata() -> dict:
@@ -141,19 +137,28 @@ def extract_emotions(metadata: dict, va_tokenizer, va_model, va_device, discrete
     return results
 
 
-def save_outputs(results: list[dict]) -> None:
-    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+def store_emotions(results: list[dict]) -> None:
+    """Store emotion scores in the SQLite emotion_scores table."""
+    conn = init_db()
     
-    headers = ["id", "user_id", "valence", "arousal"] + DISCRETE_EMOTIONS
+    for r in results:
+        conn.execute(
+            """INSERT OR REPLACE INTO emotion_scores
+               (id, user_id, valence, arousal,
+                anger, disgust, fear, joy, neutral, sadness, surprise)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                r["id"], r["user_id"], r["valence"], r["arousal"],
+                r.get("anger", 0), r.get("disgust", 0), r.get("fear", 0),
+                r.get("joy", 0), r.get("neutral", 0), r.get("sadness", 0),
+                r.get("surprise", 0),
+            ),
+        )
     
-    with open(EMOTION_SCORES_PATH, "w") as f:
-        f.write(",".join(headers) + "\n")
-        for r in results:
-            row = [str(r.get(h, "")) for h in headers]
-            f.write(",".join(row) + "\n")
+    conn.commit()
+    conn.close()
     
-    print(f"💾 Emotion scores saved: {EMOTION_SCORES_PATH}")
-    print(f"   Records: {len(results)}")
+    print(f"💾 Stored {len(results)} emotion records in SQLite (emotion_scores)")
 
 
 def main():
@@ -178,14 +183,13 @@ def main():
         print("\n⚠️  No emotions extracted. Check your captions.")
         return
     
-    print("\n💾 Step 4: Saving outputs...")
-    save_outputs(results)
+    print("\n💾 Step 4: Storing in SQLite...")
+    store_emotions(results)
     
     print("\n" + "=" * 60)
     print("✅ Phase 2C Complete!")
     print("=" * 60)
     print(f"   📊 Processed: {len(results)} captions")
-    print(f"   📁 Output: {EMOTION_SCORES_PATH}")
 
 
 if __name__ == "__main__":

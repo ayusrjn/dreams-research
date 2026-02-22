@@ -2,25 +2,23 @@
 """
 Verification Script for Grand Fusion
 
-Checks alignment between Master Manifest and Vector Files.
+Checks consistency between SQLite database and ChromaDB vector collections.
 """
 
 import sys
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # Import config
 sys.path.insert(0, str(Path(__file__).parent))
 from config import (
-    MASTER_MANIFEST_PATH,
-    FINAL_IMAGE_VECTORS_PATH,
-    FINAL_TEXT_VECTORS_PATH,
     SENTENCE_BERT_MODEL,
+    IMAGE_COLLECTION_NAME,
+    CAPTION_COLLECTION_NAME,
 )
+from db import init_db, get_collection
 
 
 def main():
@@ -28,75 +26,89 @@ def main():
     print("DREAMS Research - Grand Fusion Verification")
     print("=" * 60)
     
-    # 1. Load Files
-    print("\n📂 Loading files...")
-    if not MASTER_MANIFEST_PATH.exists():
-        print(f"❌ Manifest not found: {MASTER_MANIFEST_PATH}")
+    # 1. Load SQLite
+    print("\n📂 Loading database...")
+    conn = init_db()
+    
+    memory_count = conn.execute("SELECT count(*) FROM memories").fetchone()[0]
+    manifest_count = conn.execute("SELECT count(*) FROM master_manifest").fetchone()[0]
+    
+    print(f"   Memories: {memory_count} rows")
+    print(f"   Master Manifest (VIEW): {manifest_count} rows")
+    
+    if memory_count == 0:
+        print("\n⚠️  No records in database. Run the pipeline first.")
+        conn.close()
         return
-        
-    df = pd.read_parquet(MASTER_MANIFEST_PATH)
     
-    # Explicitly check for vector files
-    if not FINAL_IMAGE_VECTORS_PATH.exists():
-        print(f"❌ Missing vector file FINAL_IMAGE_VECTORS_PATH: {FINAL_IMAGE_VECTORS_PATH}")
-        sys.exit(1)
-        
-    if not FINAL_TEXT_VECTORS_PATH.exists():
-        print(f"❌ Missing vector file FINAL_TEXT_VECTORS_PATH: {FINAL_TEXT_VECTORS_PATH}")
-        sys.exit(1)
-        
-    img_vecs = np.load(FINAL_IMAGE_VECTORS_PATH)
-    txt_vecs = np.load(FINAL_TEXT_VECTORS_PATH)
+    # 2. Length Checks
+    print("\n📏 Checking table counts vs memories...")
+    tables = {
+        "emotion_scores": conn.execute("SELECT count(*) FROM emotion_scores").fetchone()[0],
+        "temporal_features": conn.execute("SELECT count(*) FROM temporal_features").fetchone()[0],
+        "place_assignments": conn.execute("SELECT count(*) FROM place_assignments").fetchone()[0],
+    }
     
-    print(f"   Manifest: {len(df)} rows")
-    print(f"   Image Vecs: {img_vecs.shape}")
-    print(f"   Text Vecs: {txt_vecs.shape}")
+    for table, count in tables.items():
+        status = "✅" if count > 0 else "⚠️"
+        print(f"   {status} {table}: {count}")
     
-    # 2. Length Check
-    print("\n📏 Checking lengths...")
-    if len(df) == len(img_vecs) == len(txt_vecs):
-        print("   ✅ Lengths match!")
-    else:
-        print("   ❌ Length mismatch!")
-        print(f"      DF: {len(df)}")
-        print(f"      Img: {len(img_vecs)}")
-        print(f"      Txt: {len(txt_vecs)}")
-        sys.exit(1)
+    # 3. ChromaDB consistency
+    print("\n📦 Checking ChromaDB collections...")
+    for coll_name in [IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME]:
+        collection = get_collection(coll_name)
+        coll_count = collection.count()
+        status = "✅" if coll_count > 0 else "⚠️"
+        print(f"   {status} {coll_name}: {coll_count} vectors")
+    
+    # 4. Semantic Sanity Check
+    print("\n🧠 Semantic Sanity Check (first caption)...")
+    caption_collection = get_collection(CAPTION_COLLECTION_NAME)
+    
+    if caption_collection.count() > 0:
+        # Get first record with a caption from SQLite
+        row = conn.execute(
+            "SELECT id, caption FROM memories WHERE caption IS NOT NULL AND caption != '' LIMIT 1"
+        ).fetchone()
         
-    # 3. Semantic Sanity Check
-    print("\n🧠 Semantic Sanity Check (ID=0 / First Row)...")
-    
-    # Get first row
-    row = df.iloc[0]
-    record_id = row["id"]
-    caption = row["caption"]
-    
-    print(f"   Record ID: {record_id}")
-    print(f"   Caption: '{caption}'")
-    
-    # Get vector
-    vec = txt_vecs[0]
-    
-    # Check if vector is zero (missing)
-    if np.all(vec == 0):
-        print("   ⚠️  Vector is all zeros (likely missing/redacted)")
-    else:
-        # Load model to verify
-        print("   Loading model for similarity check...")
-        model = SentenceTransformer(SENTENCE_BERT_MODEL)
-        
-        # Encode caption again
-        ref_vec = model.encode([caption])[0]
-        
-        # Compute similarity
-        sim = cosine_similarity([vec], [ref_vec])[0][0]
-        print(f"   Cosine Similarity (Stored vs Re-computed): {sim:.4f}")
-        
-        if sim > 0.99:
-            print("   ✅ Vector matches caption content!")
-        else:
-            print("   ❌ Vector mismatch!")
+        if row:
+            record_id = str(row[0])
+            caption = row[1]
             
+            print(f"   Record ID: {record_id}")
+            print(f"   Caption: '{caption[:80]}'")
+            
+            # Get stored vector from ChromaDB
+            stored = caption_collection.get(
+                ids=[record_id],
+                include=["embeddings"]
+            )
+            
+            if stored["ids"]:
+                stored_vec = stored["embeddings"][0]
+                
+                # Re-encode caption
+                print("   Loading model for similarity check...")
+                model = SentenceTransformer(SENTENCE_BERT_MODEL)
+                ref_vec = model.encode([caption], normalize_embeddings=True)[0]
+                
+                # Compare
+                sim = cosine_similarity([stored_vec], [ref_vec])[0][0]
+                print(f"   Cosine Similarity (Stored vs Re-computed): {sim:.4f}")
+                
+                if sim > 0.99:
+                    print("   ✅ Vector matches caption content!")
+                else:
+                    print("   ❌ Vector mismatch!")
+            else:
+                print(f"   ⚠️  Record {record_id} not found in ChromaDB")
+        else:
+            print("   ⚠️  No captions found in database")
+    else:
+        print("   ⚠️  Caption collection is empty")
+    
+    conn.close()
+    
     print("\n" + "=" * 60)
     print("✅ Verification Complete")
     print("=" * 60)

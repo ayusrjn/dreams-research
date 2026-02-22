@@ -17,11 +17,12 @@ data/raw/images/**/*.webp
 data/raw/test_anchorage/
 data/snapshots/*/
 
-# Processed outputs (embeddings, indices, scores)
+# Processed outputs (embeddings, database, indices, scores)
 data/processed/*.npy
 data/processed/*.json
 data/processed/*.csv
 data/processed/*.parquet
+data/processed/*.db
 data/processed/chroma_db/
 data/processed/anchorage_cache/
 !data/processed/.gitkeep
