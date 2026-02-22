@@ -106,6 +106,7 @@ python pipeline/extract_image_embeddings.py    # → ChromaDB: image_embeddings
 python pipeline/extract_caption_embeddings.py  # → ChromaDB: caption_embeddings
 python pipeline/extract_emotions.py            # → SQLite: emotion_scores
 python pipeline/extract_temporal_features.py   # → SQLite: temporal_features
+python pipeline/extract_location_embeddings.py # → ChromaDB + SQLite: location_descriptions
 
 # 3. Verify (master_manifest is a SQL VIEW — always in sync)
 python pipeline/create_master_manifest.py
@@ -125,6 +126,7 @@ python pipeline/create_master_manifest.py --export
 | `memories` | Raw record metadata (user, caption, timestamp, GPS, image path). |
 | `emotion_scores` | Valence, arousal, and 7 discrete emotion probabilities ($C_t$). |
 | `temporal_features` | Circadian sin/cos encoding + relative epoch (days since first entry). |
+| `location_descriptions` | Semantic location description, geocode display name, image caption. |
 | `master_manifest` | **VIEW** joining all tables — the unified research dataset. |
 
 ### ChromaDB (`data/processed/chroma_db/`)

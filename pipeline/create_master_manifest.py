@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from config import PROCESSED_DIR, IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME
+from config import PROCESSED_DIR, IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME, LOCATION_COLLECTION_NAME
 from db import init_db, get_collection
 
 
@@ -24,7 +24,7 @@ def verify_manifest():
     conn = init_db()
     
     print("[INFO] Table Row Counts:")
-    tables = ["memories", "emotion_scores", "temporal_features"]
+    tables = ["memories", "emotion_scores", "temporal_features", "location_descriptions"]
     counts = {}
     for table in tables:
         count = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
@@ -59,7 +59,7 @@ def verify_manifest():
     
     # 3. Check ChromaDB collections
     print("\n[INFO] ChromaDB Collections:")
-    for coll_name in [IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME]:
+    for coll_name in [IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME, LOCATION_COLLECTION_NAME]:
         collection = get_collection(coll_name)
         coll_count = collection.count()
         print(f"   {coll_name}: {coll_count} vectors")

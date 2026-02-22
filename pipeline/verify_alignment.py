@@ -17,6 +17,7 @@ from config import (
     SENTENCE_BERT_MODEL,
     IMAGE_COLLECTION_NAME,
     CAPTION_COLLECTION_NAME,
+    LOCATION_COLLECTION_NAME,
 )
 from db import init_db, get_collection
 
@@ -54,7 +55,7 @@ def main():
     
     # 3. ChromaDB consistency
     print("\n[INFO] Checking ChromaDB collections...")
-    for coll_name in [IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME]:
+    for coll_name in [IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME, LOCATION_COLLECTION_NAME]:
         collection = get_collection(coll_name)
         coll_count = collection.count()
         status = "[OK]" if coll_count > 0 else "[WARN]"

@@ -55,16 +55,26 @@ CREATE TABLE IF NOT EXISTS temporal_features (
     cos_hour     REAL
 );
 
+CREATE TABLE IF NOT EXISTS location_descriptions (
+    id                   INTEGER PRIMARY KEY REFERENCES memories(id),
+    user_id              TEXT NOT NULL,
+    description          TEXT,
+    geocode_display_name TEXT,
+    image_caption        TEXT
+);
+
 
 CREATE VIEW IF NOT EXISTS master_manifest AS
 SELECT
     m.*,
     e.valence, e.arousal,
     e.anger, e.disgust, e.fear, e.joy, e.neutral, e.sadness, e.surprise,
-    t.absolute_utc, t.relative_day, t.sin_hour, t.cos_hour
+    t.absolute_utc, t.relative_day, t.sin_hour, t.cos_hour,
+    l.description, l.geocode_display_name, l.image_caption
 FROM memories m
 LEFT JOIN emotion_scores e ON m.id = e.id
-LEFT JOIN temporal_features t ON m.id = t.id;
+LEFT JOIN temporal_features t ON m.id = t.id
+LEFT JOIN location_descriptions l ON m.id = l.id;
 """
 
 
