@@ -12,7 +12,6 @@ The DREAMS (Disentangled Representation Extraction for Autobiographical Memory S
 - **Caption Embeddings** - Sentence-BERT semantic representations  
 - **Emotion Extraction** - Valence/arousal and discrete emotion scores
 - **Temporal Features** - Circadian encoding for time-of-day analysis
-- **Location Clustering** - DBSCAN-based place identification
 
 ## Quick Start
 
@@ -42,7 +41,6 @@ cp .env.example .env
 | **Phase 2B** | Caption Embeddings (Sentence-BERT) | ✅ Complete |
 | **Phase 2C** | Emotion Extraction | ✅ Complete |
 | **Phase 2D** | Temporal Representation | ✅ Complete |
-| **Phase 2E** | Location Clustering | ✅ Complete |
 | **Phase 3** | Grand Fusion (Manifest + Vectors) | ✅ Complete |
 
 ## Project Structure

@@ -54,7 +54,7 @@ The pipeline executes in three phases to transform raw logs into research-ready 
 We extract disentangled representations using state-of-the-art models:
 *   **Visual**: CLIP (ViT-B/32) for scene semantics.
 *   **Semantic**: Sentence-BERT (`all-MiniLM-L6-v2`) for narrative structure.
-*   **Spatial**: **DBSCAN Clustering** ($\epsilon \approx 50m$) converts raw GPS coordinates into categorical Place IDs ($p$), enabling the $(u, p)$ analysis.
+*   **Spatial**: Raw GPS coordinates preserved in the `memories` table for downstream semantic analysis.
 *   **Temporal**: Cyclic encoding ($\sin/\cos$) of time-of-day.
 
 ### Phase 3: Grand Fusion
@@ -106,7 +106,6 @@ python pipeline/extract_image_embeddings.py    # → ChromaDB: image_embeddings
 python pipeline/extract_caption_embeddings.py  # → ChromaDB: caption_embeddings
 python pipeline/extract_emotions.py            # → SQLite: emotion_scores
 python pipeline/extract_temporal_features.py   # → SQLite: temporal_features
-python pipeline/extract_location_clusters.py   # → SQLite: place_assignments
 
 # 3. Verify (master_manifest is a SQL VIEW — always in sync)
 python pipeline/create_master_manifest.py
@@ -126,7 +125,6 @@ python pipeline/create_master_manifest.py --export
 | `memories` | Raw record metadata (user, caption, timestamp, GPS, image path). |
 | `emotion_scores` | Valence, arousal, and 7 discrete emotion probabilities ($C_t$). |
 | `temporal_features` | Circadian sin/cos encoding + relative epoch (days since first entry). |
-| `place_assignments` | DBSCAN place IDs, snapped coordinates, cluster centroids. |
 | `master_manifest` | **VIEW** joining all tables — the unified research dataset. |
 
 ### ChromaDB (`data/processed/chroma_db/`)

@@ -26,10 +26,6 @@ Emotion score extraction using transformer models.
 
 Temporal feature engineering.
 
-### `pipeline/extract_location_clusters.py`
-
-DBSCAN-based location clustering.
-
 ## Output Formats
 
 ### NumPy Arrays (`.npy`)

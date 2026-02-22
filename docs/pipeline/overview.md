@@ -12,12 +12,10 @@ flowchart TD
     C --> E[Phase 2B: Caption Embeddings]
     C --> F[Phase 2C: Emotion Extraction]
     C --> G[Phase 2D: Temporal Features]
-    C --> H[Phase 2E: Location Clustering]
     D --> I[processed/image_embeddings.npy]
     E --> J[processed/text_embeddings.npy]
     F --> K[processed/emotion_scores.csv]
     G --> L[processed/temporal_features.csv]
-    H --> M[processed/place_ids.csv]
 ```
 
 ## Phase Summary
@@ -29,7 +27,6 @@ flowchart TD
 | **2B** | Captions | 384-dim embeddings | Sentence-BERT |
 | **2C** | Captions | Valence/arousal + emotions | DistilRoBERTa |
 | **2D** | Timestamps | Circadian encoding | - |
-| **2E** | GPS coords | Place IDs | DBSCAN |
 
 ## Data Flow
 

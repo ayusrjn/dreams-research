@@ -46,7 +46,6 @@ def main():
     tables = {
         "emotion_scores": conn.execute("SELECT count(*) FROM emotion_scores").fetchone()[0],
         "temporal_features": conn.execute("SELECT count(*) FROM temporal_features").fetchone()[0],
-        "place_assignments": conn.execute("SELECT count(*) FROM place_assignments").fetchone()[0],
     }
     
     for table, count in tables.items():

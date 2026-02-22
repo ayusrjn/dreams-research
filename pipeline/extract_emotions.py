@@ -74,7 +74,7 @@ def extract_emotions(metadata: dict, va_tokenizer, va_model, va_device, discrete
     records = metadata.get("records", [])
     results = []
     
- print(f" Processing {len(records)} records...")
+    print(f"[INFO] Processing {len(records)} records...")
     
     for record in records:
         record_id = record.get("id")
@@ -167,7 +167,7 @@ def main():
     print("=" * 60)
     print()
     
- print("[INFO] Step 1: Loading metadata...")
+    print("[INFO] Step 1: Loading metadata...")
     metadata = load_metadata()
     print(f"   Snapshot: {metadata.get('snapshot_id')}")
     print(f"   Records: {metadata.get('record_count')}")

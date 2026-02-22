@@ -77,7 +77,6 @@ nav:
       - Phase 2B - Caption Embeddings: pipeline/phase2b-caption-embeddings.md
       - Phase 2C - Emotion Extraction: pipeline/phase2c-emotion-extraction.md
       - Phase 2D - Temporal Features: pipeline/phase2d-temporal-features.md
-      - Phase 2E - Location Clustering: pipeline/phase2e-location-clustering.md
       - Phase 3 - Grand Fusion: pipeline/phase3-grand-fusion.md
   - API Reference: api-reference.md
   - Contributing: contributing.md

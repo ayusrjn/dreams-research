@@ -55,28 +55,16 @@ CREATE TABLE IF NOT EXISTS temporal_features (
     cos_hour     REAL
 );
 
-CREATE TABLE IF NOT EXISTS place_assignments (
-    id              INTEGER PRIMARY KEY REFERENCES memories(id),
-    user_id         TEXT NOT NULL,
-    snapped_lat     REAL,
-    snapped_lon     REAL,
-    place_id        TEXT,
-    centroid_lat    REAL,
-    centroid_lon    REAL,
-    is_new_cluster  INTEGER DEFAULT 0
-);
 
 CREATE VIEW IF NOT EXISTS master_manifest AS
 SELECT
     m.*,
     e.valence, e.arousal,
     e.anger, e.disgust, e.fear, e.joy, e.neutral, e.sadness, e.surprise,
-    t.absolute_utc, t.relative_day, t.sin_hour, t.cos_hour,
-    p.place_id, p.centroid_lat, p.centroid_lon
+    t.absolute_utc, t.relative_day, t.sin_hour, t.cos_hour
 FROM memories m
 LEFT JOIN emotion_scores e ON m.id = e.id
-LEFT JOIN temporal_features t ON m.id = t.id
-LEFT JOIN place_assignments p ON m.id = p.id;
+LEFT JOIN temporal_features t ON m.id = t.id;
 """
 
 

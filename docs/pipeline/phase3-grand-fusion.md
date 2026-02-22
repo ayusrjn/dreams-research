@@ -6,7 +6,7 @@ The **Grand Fusion** is the final step of the DREAMS Research Pipeline. It merge
 
 This phase performs three critical actions:
 
-1.  **Relational Join**: Merges metadata, emotion scores, temporal features, and place IDs into a single dataframe.
+1.  **Relational Join**: Merges metadata, emotion scores, and temporal features into a single dataframe.
 2.  **Vector Alignment**: Re-orders image and text vectors to match the sorted order of the master manifest.
 3.  **Normalization**: Ensures all features are in the correct format (e.g., categorical place IDs).
 
@@ -17,7 +17,6 @@ This phase performs three critical actions:
 | `data/raw/metadata.json` | Original memory records | Phase 1 |
 | `data/processed/emotion_scores.csv` | Valence, arousal, and discrete emotions | Phase 2C |
 | `data/processed/temporal_features.csv` | Circadian and longitudinal features | Phase 2D |
-| `data/processed/place_ids.csv` | Clustered location IDs | Phase 2E |
 | `data/processed/image_embeddings.npy` | CLIP image vectors (N, 512) | Phase 2A |
 | `data/processed/text_embeddings.npy` | S-BERT text vectors (N, 384) | Phase 2B |
 
@@ -44,7 +43,6 @@ A Parquet file containing the unified dataset. Key columns include:
 -   `valence`, `arousal`: Emotional dimensions (0-1)
 -   `joy`, `sadness`, etc.: Discrete emotion probabilities
 -   `sin_hour`, `cos_hour`: Circadian time encoding
--   `place_id`: Categorical location cluster ID
 
 ### 2. Synchronized Vectors
 

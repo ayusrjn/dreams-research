@@ -129,41 +129,6 @@ The goal here is to transform a linear timestamp into features that reveal circa
 
 ---
 
-### E. Location Representation
-
-To avoid "micro-clusters" caused by GPS drift, we must move from raw coordinates to Categorical Place Identities.Preprocessing (Snap-to-Grid): * Truncate raw Lat/Lon to 4 decimal places before clustering. This provides an immediate $\approx 11\text{m}$ "buffer" against sensor noise.Clustering Algorithm (DBSCAN):Metric: haversine (to account for the Earth's curvature).Epsilon ($\epsilon$): Set to $0.0005$ ($\approx 50\text{m}$). This is the "sweet spot" for distinguishing between "My House" and "The Coffee Shop down the street."Min_Samples: Set to $1$. In this research, even a single entry at a unique location is a valid (though high-variance) data point.Place ID Assignment: * Generate a stable place_id (e.g., P_001).Centroid Calculation: The mean Lat/Lon of all points in the cluster. This becomes the "Anchor Point" for your map visualizations.
-
-## Output
-
-```json
-{
-  "temporal": {
-    "absolute_utc": "2026-01-26T14:30:00Z",
-    "relative_day": 42,
-    "circadian_coord": {
-      "sin_hour": 0.5, 
-      "cos_hour": -0.866
-    }
-  },
-  "geospatial": {
-    "raw_coord": {"lat": 40.7128, "lon": -74.0060},
-    "place_id": "place_03",
-    "is_new_cluster": false,
-    "place_centroid": {"lat": 40.7129, "lon": -74.0059}
-  },
-  "research_metadata": {
-    "processing_version": "1.0.2",
-    "dbscan_eps": 0.0005
-  }
-}
-```
-
-## Key Rule
-
-> Location is categorical context, not a vector.
-
----
-
 ## 4️⃣ Core Data Representation (After Processing)
 
 Each memory becomes:
@@ -174,6 +139,5 @@ Each memory becomes:
 | Text embedding | Local vector store |
 | Emotion (V/A) | Metadata |
 | Time | Metadata |
-| Place ID | Metadata |
 
 **No early fusion. Ever.**

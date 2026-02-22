@@ -24,7 +24,7 @@ def verify_manifest():
     conn = init_db()
     
     print("[INFO] Table Row Counts:")
-    tables = ["memories", "emotion_scores", "temporal_features", "place_assignments"]
+    tables = ["memories", "emotion_scores", "temporal_features"]
     counts = {}
     for table in tables:
         count = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
@@ -48,7 +48,6 @@ def verify_manifest():
     null_checks = {
         "valence": "SELECT count(*) FROM master_manifest WHERE valence IS NULL",
         "arousal": "SELECT count(*) FROM master_manifest WHERE arousal IS NULL",
-        "place_id": "SELECT count(*) FROM master_manifest WHERE place_id IS NULL",
         "sin_hour": "SELECT count(*) FROM master_manifest WHERE sin_hour IS NULL",
     }
     

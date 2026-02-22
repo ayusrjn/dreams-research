@@ -178,7 +178,7 @@ def main():
     print("=" * 60)
     print()
     
- print("[INFO] Step 1: Loading metadata...")
+    print("[INFO] Step 1: Loading metadata...")
     metadata = load_metadata()
     print(f"   Snapshot: {metadata.get('snapshot_id')}")
     print(f"   Records: {metadata.get('record_count')}")

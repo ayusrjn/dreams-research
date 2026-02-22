@@ -449,7 +449,7 @@ def main():
     user_agent = get_nominatim_user_agent()
 
     # Load metadata
- print("[INFO] Step 1: Loading metadata...")
+    print("[INFO] Step 1: Loading metadata...")
     if not RAW_METADATA_PATH.exists():
         print(f"   Metadata not found: {RAW_METADATA_PATH}")
         print("   Run pull_data.py first.")
