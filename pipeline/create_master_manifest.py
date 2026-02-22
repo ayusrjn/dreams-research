@@ -23,7 +23,7 @@ def verify_manifest():
     """Verify the master_manifest VIEW and underlying tables."""
     conn = init_db()
     
-    print("📊 Table Row Counts:")
+    print("[INFO] Table Row Counts:")
     tables = ["memories", "emotion_scores", "temporal_features", "place_assignments"]
     counts = {}
     for table in tables:
@@ -36,13 +36,13 @@ def verify_manifest():
     print(f"\n   master_manifest (VIEW): {manifest_count}")
     
     # Check consistency
-    print("\n🔍 Integrity Checks:")
+    print("\n[INFO] Integrity Checks:")
     
     # 1. Manifest should match memories count
     if manifest_count == counts["memories"]:
-        print(f"   ✅ Manifest rows ({manifest_count}) = Memories rows ({counts['memories']})")
+        print(f"   [OK] Manifest rows ({manifest_count}) = Memories rows ({counts['memories']})")
     else:
-        print(f"   ❌ Manifest rows ({manifest_count}) ≠ Memories rows ({counts['memories']})")
+        print(f"   [ERROR] Manifest rows ({manifest_count}) ≠ Memories rows ({counts['memories']})")
     
     # 2. Check for NULLs in key columns
     null_checks = {
@@ -55,18 +55,18 @@ def verify_manifest():
     print("\n   NULL counts in master_manifest:")
     for col, query in null_checks.items():
         null_count = conn.execute(query).fetchone()[0]
-        status = "⚠️" if null_count > 0 else "✅"
+        status = "[WARN]" if null_count > 0 else "[OK]"
         print(f"   {status}  {col}: {null_count} NULLs")
     
     # 3. Check ChromaDB collections
-    print("\n📦 ChromaDB Collections:")
+    print("\n[INFO] ChromaDB Collections:")
     for coll_name in [IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME]:
         collection = get_collection(coll_name)
         coll_count = collection.count()
         print(f"   {coll_name}: {coll_count} vectors")
     
     # 4. Sample row
-    print("\n📋 Sample Row (first record):")
+    print("\n[INFO] Sample Row (first record):")
     row = conn.execute("SELECT * FROM master_manifest LIMIT 1").fetchone()
     if row:
         columns = [desc[0] for desc in conn.execute("SELECT * FROM master_manifest LIMIT 0").description]
@@ -86,7 +86,7 @@ def export_parquet():
     try:
         import pandas as pd
     except ImportError:
-        print("❌ pandas is required for Parquet export: pip install pandas pyarrow")
+        print("[ERROR] pandas is required for Parquet export: pip install pandas pyarrow")
         return
     
     conn = init_db()
@@ -95,7 +95,7 @@ def export_parquet():
     
     output_path = PROCESSED_DIR / "master_manifest.parquet"
     df.to_parquet(output_path, index=False)
-    print(f"\n💾 Exported to: {output_path}")
+    print(f"\n[INFO] Exported to: {output_path}")
     print(f"   Shape: {df.shape}")
 
 
@@ -112,14 +112,14 @@ def main():
     ok = verify_manifest()
     
     if args.export:
-        print("\n📤 Exporting to Parquet...")
+        print("\n[INFO] Exporting to Parquet...")
         export_parquet()
     
     print("\n" + "=" * 60)
     if ok:
-        print("✅ Grand Fusion Verification Complete!")
+        print("[OK] Grand Fusion Verification Complete!")
     else:
-        print("⚠️  No records found. Run the pipeline first.")
+        print("[WARN] No records found. Run the pipeline first.")
     print("=" * 60)
 
 

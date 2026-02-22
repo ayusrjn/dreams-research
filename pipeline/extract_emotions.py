@@ -29,7 +29,7 @@ from db import init_db
 
 def load_metadata() -> dict:
     if not RAW_METADATA_PATH.exists():
-        print(f"❌ Metadata not found: {RAW_METADATA_PATH}")
+        print(f"[ERROR] Metadata not found: {RAW_METADATA_PATH}")
         print("   Run Phase 1 first: python pipeline/pull_data.py")
         sys.exit(1)
     
@@ -39,7 +39,7 @@ def load_metadata() -> dict:
 
 def load_valence_arousal_model():
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"🔧 Loading valence/arousal model: {EMOTION_MODEL} on {device}")
+    print(f"[INFO] Loading valence/arousal model: {EMOTION_MODEL} on {device}")
     
     tokenizer = AutoTokenizer.from_pretrained(EMOTION_MODEL)
     model = AutoModelForSequenceClassification.from_pretrained(EMOTION_MODEL)
@@ -51,7 +51,7 @@ def load_valence_arousal_model():
 
 def load_discrete_emotion_model():
     device_id = 0 if torch.cuda.is_available() else -1
-    print(f"🔧 Loading discrete emotion model: {DISCRETE_EMOTION_MODEL}")
+    print(f"[INFO] Loading discrete emotion model: {DISCRETE_EMOTION_MODEL}")
     
     classifier = pipeline(
         "text-classification",
@@ -74,7 +74,7 @@ def extract_emotions(metadata: dict, va_tokenizer, va_model, va_device, discrete
     records = metadata.get("records", [])
     results = []
     
-    print(f"📝 Processing {len(records)} records...")
+ print(f" Processing {len(records)} records...")
     
     for record in records:
         record_id = record.get("id")
@@ -82,12 +82,12 @@ def extract_emotions(metadata: dict, va_tokenizer, va_model, va_device, discrete
         raw_caption = record.get("caption", "")
         
         if not raw_caption or raw_caption == "[REDACTED]":
-            print(f"   ⚠️  Record {record_id}: No valid caption (skipped)")
+            print(f"   [WARN] Record {record_id}: No valid caption (skipped)")
             continue
         
         caption = preprocess_caption(raw_caption)
         if not caption:
-            print(f"   ⚠️  Record {record_id}: Empty after preprocessing (skipped)")
+            print(f"   [WARN] Record {record_id}: Empty after preprocessing (skipped)")
             continue
         
         try:
@@ -128,10 +128,10 @@ def extract_emotions(metadata: dict, va_tokenizer, va_model, va_device, discrete
             results.append(result)
             
             top_emotion = max(emotion_scores, key=emotion_scores.get)
-            print(f"   ✅ Record {record_id}: V={valence:.2f} A={arousal:.2f} | {top_emotion}={emotion_scores[top_emotion]:.2f}")
+            print(f"   [OK] Record {record_id}: V={valence:.2f} A={arousal:.2f} | {top_emotion}={emotion_scores[top_emotion]:.2f}")
             
         except Exception as e:
-            print(f"   ❌ Record {record_id}: Failed - {e}")
+            print(f"   [ERROR] Record {record_id}: Failed - {e}")
             continue
     
     return results
@@ -158,7 +158,7 @@ def store_emotions(results: list[dict]) -> None:
     conn.commit()
     conn.close()
     
-    print(f"💾 Stored {len(results)} emotion records in SQLite (emotion_scores)")
+    print(f"[INFO] Stored {len(results)} emotion records in SQLite (emotion_scores)")
 
 
 def main():
@@ -167,29 +167,29 @@ def main():
     print("=" * 60)
     print()
     
-    print("📂 Step 1: Loading metadata...")
+ print("[INFO] Step 1: Loading metadata...")
     metadata = load_metadata()
     print(f"   Snapshot: {metadata.get('snapshot_id')}")
     print(f"   Records: {metadata.get('record_count')}")
     
-    print("\n🧠 Step 2: Loading emotion models...")
+    print("\n[INFO] Step 2: Loading emotion models...")
     va_tokenizer, va_model, va_device = load_valence_arousal_model()
     discrete_classifier = load_discrete_emotion_model()
     
-    print("\n🔍 Step 3: Extracting emotions...")
+    print("\n[INFO] Step 3: Extracting emotions...")
     results = extract_emotions(metadata, va_tokenizer, va_model, va_device, discrete_classifier)
     
     if not results:
-        print("\n⚠️  No emotions extracted. Check your captions.")
+        print("\n[WARN] No emotions extracted. Check your captions.")
         return
     
-    print("\n💾 Step 4: Storing in SQLite...")
+    print("\n[INFO] Step 4: Storing in SQLite...")
     store_emotions(results)
     
     print("\n" + "=" * 60)
-    print("✅ Phase 2C Complete!")
+    print("[OK] Phase 2C Complete!")
     print("=" * 60)
-    print(f"   📊 Processed: {len(results)} captions")
+    print(f"   [INFO] Processed: {len(results)} captions")
 
 
 if __name__ == "__main__":

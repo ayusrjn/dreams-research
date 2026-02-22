@@ -31,7 +31,7 @@ from db import get_collection
 def load_metadata() -> dict:
     """Load the frozen snapshot metadata."""
     if not RAW_METADATA_PATH.exists():
-        print(f"❌ Metadata not found: {RAW_METADATA_PATH}")
+        print(f"[ERROR] Metadata not found: {RAW_METADATA_PATH}")
         print("   Run Phase 1 first: python pipeline/pull_data.py")
         sys.exit(1)
     
@@ -42,7 +42,7 @@ def load_metadata() -> dict:
 def load_clip_model():
     """Load CLIP model and preprocessing function."""
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"🔧 Loading CLIP model: {CLIP_MODEL} on {device}")
+    print(f"[INFO] Loading CLIP model: {CLIP_MODEL} on {device}")
     
     model, preprocess = clip.load(CLIP_MODEL, device=device)
     model.eval()
@@ -61,14 +61,14 @@ def extract_embeddings(metadata: dict, model, preprocess, device) -> tuple[list[
     embeddings = []
     record_infos = []
     
-    print(f"📷 Processing {len(records)} records...")
+    print(f"[INFO] Processing {len(records)} records...")
     
     for record in records:
         record_id = record.get("id")
         local_image = record.get("local_image")
         
         if not local_image:
-            print(f"   ⚠️  Record {record_id}: No local image path")
+            print(f"   [WARN] Record {record_id}: No local image path")
             continue
         
         # Try exact path first
@@ -81,7 +81,7 @@ def extract_embeddings(metadata: dict, model, preprocess, device) -> tuple[list[
             if found_paths:
                 image_path = found_paths[0]
             else:
-                print(f"   ⚠️  Record {record_id}: Image not found - {local_image}")
+                print(f"   [WARN] Record {record_id}: Image not found - {local_image}")
                 continue
         
         try:
@@ -103,10 +103,10 @@ def extract_embeddings(metadata: dict, model, preprocess, device) -> tuple[list[
                 "local_image": local_image,
             })
             
-            print(f"   ✅ Record {record_id}: Extracted ({embedding.shape[0]} dims)")
+            print(f"   [OK] Record {record_id}: Extracted ({embedding.shape[0]} dims)")
             
         except (FileNotFoundError, UnidentifiedImageError, ValueError, RuntimeError) as e:
-            print(f"   ❌ Record {record_id}: Failed - {e}")
+            print(f"   [ERROR] Record {record_id}: Failed - {e}")
             continue
     
     if not embeddings:
@@ -128,7 +128,7 @@ def store_embeddings(record_infos: list[dict], embeddings: np.ndarray) -> None:
         metadatas=metadatas,
     )
     
-    print(f"💾 Stored {len(ids)} embeddings in ChromaDB ({IMAGE_COLLECTION_NAME})")
+    print(f"[INFO] Stored {len(ids)} embeddings in ChromaDB ({IMAGE_COLLECTION_NAME})")
     print(f"   Collection size: {collection.count()}")
 
 
@@ -140,34 +140,34 @@ def main():
     print()
     
     # Step 1: Load metadata
-    print("📂 Step 1: Loading metadata...")
+ print("[INFO] Step 1: Loading metadata...")
     metadata = load_metadata()
     print(f"   Snapshot: {metadata.get('snapshot_id')}")
     print(f"   Records: {metadata.get('record_count')}")
     
     # Step 2: Load CLIP model
-    print("\n🧠 Step 2: Loading CLIP model...")
+    print("\n[INFO] Step 2: Loading CLIP model...")
     model, preprocess, device = load_clip_model()
     
     # Step 3: Extract embeddings
-    print("\n🔍 Step 3: Extracting embeddings...")
+    print("\n[INFO] Step 3: Extracting embeddings...")
     record_infos, embeddings = extract_embeddings(metadata, model, preprocess, device)
     
     if len(embeddings) == 0:
-        print("\n⚠️  No embeddings extracted. Check your images.")
+        print("\n[WARN] No embeddings extracted. Check your images.")
         return
     
     # Step 4: Store in ChromaDB
-    print("\n💾 Step 4: Storing in ChromaDB...")
+    print("\n[INFO] Step 4: Storing in ChromaDB...")
     store_embeddings(record_infos, embeddings)
     
     # Summary
     print("\n" + "=" * 60)
-    print("✅ Phase 2A Complete!")
+    print("[OK] Phase 2A Complete!")
     print("=" * 60)
-    print(f"   📊 Embeddings: {embeddings.shape[0]} images")
-    print(f"   📐 Dimensions: {embeddings.shape[1]}")
-    print(f"   💾 Collection: {IMAGE_COLLECTION_NAME}")
+    print(f"   [INFO] Embeddings: {embeddings.shape[0]} images")
+    print(f"   [INFO] Dimensions: {embeddings.shape[1]}")
+    print(f"   [INFO] Collection: {IMAGE_COLLECTION_NAME}")
 
 
 if __name__ == "__main__":

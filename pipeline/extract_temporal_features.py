@@ -24,7 +24,7 @@ from db import init_db
 def load_metadata() -> dict:
     """Load the frozen snapshot metadata."""
     if not RAW_METADATA_PATH.exists():
-        print(f"❌ Metadata not found: {RAW_METADATA_PATH}")
+        print(f"[ERROR] Metadata not found: {RAW_METADATA_PATH}")
         print("   Run Phase 1 first: python pipeline/pull_data.py")
         sys.exit(1)
     
@@ -106,7 +106,7 @@ def extract_temporal_features(metadata: dict) -> list[dict]:
     records = metadata.get("records", [])
     results = []
     
-    print(f"📅 Processing {len(records)} records...")
+    print(f"[INFO] Processing {len(records)} records...")
     
     print("   Computing user first entries...")
     user_first = compute_user_first_entries(records)
@@ -118,12 +118,12 @@ def extract_temporal_features(metadata: dict) -> list[dict]:
         timestamp_str = record.get("timestamp")
         
         if not timestamp_str:
-            print(f"   ⚠️  Record {record_id}: No timestamp (skipped)")
+            print(f"   [WARN] Record {record_id}: No timestamp (skipped)")
             continue
         
         dt = parse_timestamp(timestamp_str)
         if dt is None:
-            print(f"   ⚠️  Record {record_id}: Invalid timestamp format (skipped)")
+            print(f"   [WARN] Record {record_id}: Invalid timestamp format (skipped)")
             continue
         
         hour = dt.hour
@@ -145,7 +145,7 @@ def extract_temporal_features(metadata: dict) -> list[dict]:
         }
         results.append(result)
         
-        print(f"   ✅ Record {record_id}: Day {relative_day}, Hour {hour} → sin={sin_hour:.3f}, cos={cos_hour:.3f}")
+        print(f"   [OK] Record {record_id}: Day {relative_day}, Hour {hour} -> sin={sin_hour:.3f}, cos={cos_hour:.3f}")
     
     return results
 
@@ -168,7 +168,7 @@ def store_temporal_features(results: list[dict]) -> None:
     conn.commit()
     conn.close()
     
-    print(f"💾 Stored {len(results)} temporal records in SQLite (temporal_features)")
+    print(f"[INFO] Stored {len(results)} temporal records in SQLite (temporal_features)")
 
 
 def main():
@@ -178,30 +178,30 @@ def main():
     print("=" * 60)
     print()
     
-    print("📂 Step 1: Loading metadata...")
+ print("[INFO] Step 1: Loading metadata...")
     metadata = load_metadata()
     print(f"   Snapshot: {metadata.get('snapshot_id')}")
     print(f"   Records: {metadata.get('record_count')}")
     
-    print("\n🔍 Step 2: Extracting temporal features...")
+    print("\n[INFO] Step 2: Extracting temporal features...")
     results = extract_temporal_features(metadata)
     
     if not results:
-        print("\n⚠️  No temporal features extracted. Check your timestamps.")
+        print("\n[WARN] No temporal features extracted. Check your timestamps.")
         return
     
-    print("\n💾 Step 3: Storing in SQLite...")
+    print("\n[INFO] Step 3: Storing in SQLite...")
     store_temporal_features(results)
     
     # Summary
     print("\n" + "=" * 60)
-    print("✅ Phase 2D Complete!")
+    print("[OK] Phase 2D Complete!")
     print("=" * 60)
-    print(f"   📊 Processed: {len(results)} records")
+    print(f"   [INFO] Processed: {len(results)} records")
     
     if results:
         days = [r["relative_day"] for r in results]
-        print(f"\n📈 Temporal Range:")
+        print(f"\n[INFO] Temporal Range:")
         print(f"   Relative days: {min(days)} to {max(days)}")
 
 

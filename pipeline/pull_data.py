@@ -52,7 +52,7 @@ def pull_records_from_d1() -> list:
         List of record dictionaries from the database.
     """
     if not all([D1_API_TOKEN, CF_ACCOUNT_ID, D1_DATABASE_ID]):
-        print("⚠️  D1 credentials not configured. Using empty dataset.")
+        print("[WARN] D1 credentials not configured. Using empty dataset.")
         print("   Set environment variables: D1_API_TOKEN, CF_ACCOUNT_ID, D1_DATABASE_ID")
         return []
     
@@ -75,14 +75,14 @@ def pull_records_from_d1() -> list:
         
         if data.get("success"):
             results = data.get("result", [{}])[0].get("results", [])
-            print(f"✅ Pulled {len(results)} records from D1")
+            print(f"[OK] Pulled {len(results)} records from D1")
             return results
         else:
-            print(f"❌ D1 API error: {data.get('errors', 'Unknown error')}")
+            print(f"[ERROR] D1 API error: {data.get('errors', 'Unknown error')}")
             return []
             
     except requests.RequestException as e:
-        print(f"❌ Network error: {e}")
+        print(f"[ERROR] Network error: {e}")
         return []
 
 
@@ -125,11 +125,11 @@ def download_image(url: str, user_id: str, record_id: int) -> str | None:
             f.write(response.content)
         
         relative_path = f"{sanitized_user_id}/{filename}"
-        print(f"   📥 Downloaded: {relative_path}")
+        print(f"   [INFO] Downloaded: {relative_path}")
         return relative_path
         
     except requests.RequestException as e:
-        print(f"   ⚠️  Failed to download image for record {record_id}: {e}")
+        print(f"   [WARN] Failed to download image for record {record_id}: {e}")
         return None
 
 
@@ -211,7 +211,7 @@ def save_metadata(snapshot: dict) -> None:
     with open(METADATA_PATH, "w") as f:
         json.dump(snapshot, f, indent=2, default=str)
     
-    print(f"\n💾 Metadata saved: {METADATA_PATH}")
+    print(f"\n[INFO] Metadata saved: {METADATA_PATH}")
 
 
 def freeze_snapshot(snapshot: dict) -> Path:
@@ -242,7 +242,7 @@ def freeze_snapshot(snapshot: dict) -> Path:
     with open(snapshot_metadata_path, "w") as f:
         json.dump(snapshot, f, indent=2, default=str)
     
-    print(f"❄️  Snapshot frozen: {snapshot_dir}")
+    print(f"[INFO] Snapshot frozen: {snapshot_dir}")
     return snapshot_dir
 
 
@@ -258,26 +258,26 @@ def main():
     SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
     
     # Step 1: Pull records from D1
-    print("📡 Step 1: Pulling records from D1...")
+    print("[INFO] Step 1: Pulling records from D1...")
     records = pull_records_from_d1()
     
     if not records:
-        print("\n⚠️  No records to process. Exiting.")
+        print("\n[WARN] No records to process. Exiting.")
         return
     
     # Step 2: Process records and download images
-    print(f"\n📥 Step 2: Processing {len(records)} records and downloading images...")
+    print(f"\n[INFO] Step 2: Processing {len(records)} records and downloading images...")
     processed_records, user_stats = process_records(records)
     
     # Step 3: Create snapshot
-    print("\n📦 Step 3: Creating snapshot...")
+    print("\n[INFO] Step 3: Creating snapshot...")
     snapshot = create_snapshot(processed_records, user_stats)
     
     # Step 4: Save metadata (raw JSON preserved for snapshot freezing)
     save_metadata(snapshot)
     
     # Step 5: Insert into SQLite
-    print("\n🗄️  Step 5: Inserting records into SQLite...")
+    print("\n[INFO] Step 5: Inserting records into SQLite...")
     conn = init_db()
     conn.execute("DELETE FROM memories")  # Fresh pull replaces all
     for rec in processed_records:
@@ -298,18 +298,18 @@ def main():
     conn.close()
     
     # Step 6: Freeze snapshot
-    print("\n❄️  Step 6: Freezing snapshot...")
+    print("\n[INFO] Step 6: Freezing snapshot...")
     snapshot_path = freeze_snapshot(snapshot)
     
     # Summary
     print("\n" + "=" * 60)
-    print("✅ Phase 1 Complete!")
+    print("[OK] Phase 1 Complete!")
     print("=" * 60)
-    print(f"   📊 Records: {snapshot['record_count']}")
-    print(f"   👥 Users: {snapshot['user_count']}")
-    print(f"   📁 Raw data: {RAW_DIR}")
-    print(f"   🗄️  Database: dreams.db")
-    print(f"   ❄️  Snapshot: {snapshot_path}")
+    print(f"   [INFO] Records: {snapshot['record_count']}")
+    print(f"   [INFO] Users: {snapshot['user_count']}")
+    print(f"   [INFO] Raw data: {RAW_DIR}")
+    print(f"   [INFO] Database: dreams.db")
+    print(f"   [INFO] Snapshot: {snapshot_path}")
     print("\nThis snapshot is the **experiment boundary**.")
 
 

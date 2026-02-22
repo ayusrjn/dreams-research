@@ -37,7 +37,7 @@ from db import init_db
 def load_metadata() -> dict:
     """Load the frozen snapshot metadata."""
     if not RAW_METADATA_PATH.exists():
-        print(f"❌ Metadata not found: {RAW_METADATA_PATH}")
+        print(f"[ERROR] Metadata not found: {RAW_METADATA_PATH}")
         print("   Run Phase 1 first: python pipeline/pull_data.py")
         sys.exit(1)
     
@@ -66,7 +66,7 @@ def extract_coordinates(metadata: dict) -> tuple[list[dict], np.ndarray]:
     valid_records = []
     coords = []
     
-    print(f"📍 Processing {len(records)} records...")
+    print(f"[INFO] Processing {len(records)} records...")
     
     for record in records:
         record_id = record.get("id")
@@ -75,18 +75,18 @@ def extract_coordinates(metadata: dict) -> tuple[list[dict], np.ndarray]:
         lon = record.get("lon")
         
         if lat is None or lon is None:
-            print(f"   ⚠️  Record {record_id}: No coordinates (skipped)")
+            print(f"   [WARN] Record {record_id}: No coordinates (skipped)")
             continue
         
         try:
             lat = float(lat)
             lon = float(lon)
         except (ValueError, TypeError):
-            print(f"   ⚠️  Record {record_id}: Invalid coordinates (skipped)")
+            print(f"   [WARN] Record {record_id}: Invalid coordinates (skipped)")
             continue
         
         if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-            print(f"   ⚠️  Record {record_id}: Out of range ({lat}, {lon}) (skipped)")
+            print(f"   [WARN] Record {record_id}: Out of range ({lat}, {lon}) (skipped)")
             continue
         
         snapped_lat = snap_to_grid(lat, COORD_DECIMAL_PLACES)
@@ -192,7 +192,7 @@ def assign_place_ids(records: list[dict], labels: np.ndarray, centroids: dict) -
             "is_new_cluster": is_new,
         })
         
-        print(f"   ✅ Record {record['id']}: {place_id} "
+        print(f"   [OK] Record {record['id']}: {place_id} "
               f"({record['snapped_lat']:.4f}, {record['snapped_lon']:.4f})")
     
     return results
@@ -218,7 +218,7 @@ def store_place_assignments(results: list[dict]) -> None:
     conn.commit()
     conn.close()
     
-    print(f"💾 Stored {len(results)} place assignments in SQLite (place_assignments)")
+    print(f"[INFO] Stored {len(results)} place assignments in SQLite (place_assignments)")
 
 
 def main():
@@ -229,43 +229,43 @@ def main():
     print()
     
     # Step 1: Load metadata
-    print("📂 Step 1: Loading metadata...")
+ print("[INFO] Step 1: Loading metadata...")
     metadata = load_metadata()
     print(f"   Snapshot: {metadata.get('snapshot_id')}")
     print(f"   Records: {metadata.get('record_count')}")
     
     # Step 2: Extract coordinates
-    print("\n📍 Step 2: Extracting and preprocessing coordinates...")
+    print("\n[INFO] Step 2: Extracting and preprocessing coordinates...")
     records, coordinates = extract_coordinates(metadata)
     
     if len(records) == 0:
-        print("\n⚠️  No valid coordinates found.")
+        print("\n[WARN] No valid coordinates found.")
         return
     
     # Step 3: Cluster
-    print("\n🔗 Step 3: Clustering locations...")
+    print("\n[INFO] Step 3: Clustering locations...")
     labels = cluster_locations(coordinates)
     
     # Step 4: Compute centroids
-    print("\n📌 Step 4: Computing centroids...")
+    print("\n[INFO] Step 4: Computing centroids...")
     centroids = compute_centroids(records, labels)
     print(f"   Centroids computed for {len(centroids)} clusters")
     
     # Step 5: Assign Place IDs
-    print("\n🏷️  Step 5: Assigning Place IDs...")
+    print("\n[INFO] Step 5: Assigning Place IDs...")
     results = assign_place_ids(records, labels, centroids)
     
     # Step 6: Store in SQLite
-    print("\n💾 Step 6: Storing in SQLite...")
+    print("\n[INFO] Step 6: Storing in SQLite...")
     store_place_assignments(results)
     
     # Summary
     unique_places = len(set(r["place_id"] for r in results))
     print("\n" + "=" * 60)
-    print("✅ Phase 2E Complete!")
+    print("[OK] Phase 2E Complete!")
     print("=" * 60)
-    print(f"   📊 Records: {len(results)}")
-    print(f"   🗺️  Unique places: {unique_places}")
+    print(f"   [INFO] Records: {len(results)}")
+    print(f"   [INFO] Unique places: {unique_places}")
 
 
 if __name__ == "__main__":

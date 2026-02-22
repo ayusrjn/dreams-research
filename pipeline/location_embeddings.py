@@ -98,7 +98,7 @@ def get_image_caption(image_path: str, api_key: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 2. Single-record pipeline (caption → geocode → describe)
+# 2. Single-record pipeline (caption -> geocode -> describe)
 # ---------------------------------------------------------------------------
 
 async def process_single_record(
@@ -115,7 +115,7 @@ async def process_single_record(
     lon = record.get("lon")
 
     if lat is None or lon is None:
-        print(f"   ⚠️  Record {record_id}: No coordinates (skipped)")
+        print(f"   [WARN] Record {record_id}: No coordinates (skipped)")
         return None
 
     lat, lon = float(lat), float(lon)
@@ -136,21 +136,21 @@ async def process_single_record(
                 break
 
     if image_path is None:
-        print(f"   ⚠️  Record {record_id}: Image not found (skipped)")
+        print(f"   [WARN] Record {record_id}: Image not found (skipped)")
         return None
 
     # --- Caption ---
     try:
         caption = get_image_caption(image_path, api_key)
     except Exception as e:
-        print(f"   ⚠️  Record {record_id}: Captioning failed ({e})")
+        print(f"   [WARN] Record {record_id}: Captioning failed ({e})")
         caption = None
 
     # --- Geocode ---
     try:
         geocode_data = await reverse_geocode(lat, lon, user_agent=user_agent)
     except Exception as e:
-        print(f"   ⚠️  Record {record_id}: Geocoding failed ({e})")
+        print(f"   [WARN] Record {record_id}: Geocoding failed ({e})")
         geocode_data = {"display_name": None, "address": None, "raw": None}
 
     # --- Description ---
@@ -159,15 +159,15 @@ async def process_single_record(
             lat, lon, geocode_data, api_key=api_key, caption=caption
         )
     except Exception as e:
-        print(f"   ⚠️  Record {record_id}: Description generation failed ({e})")
+        print(f"   [WARN] Record {record_id}: Description generation failed ({e})")
         description = None
 
     if not description:
-        print(f"   ⚠️  Record {record_id}: No description produced (skipped)")
+        print(f"   [WARN] Record {record_id}: No description produced (skipped)")
         return None
 
     display_name = geocode_data.get("display_name") or "(unknown)"
-    print(f"   ✅ Record {record_id}: {display_name}")
+    print(f"   [OK] Record {record_id}: {display_name}")
     print(f"      Caption:     {caption}")
     print(f"      Description: {description}")
 
@@ -369,7 +369,7 @@ def main():
 
     # --- Query mode -------------------------------------------------------
     if args.query:
-        print("🔍 Query Mode")
+        print("[INFO] Query Mode")
         print(f"   Loading Sentence-BERT model: {SENTENCE_BERT_MODEL}")
         sbert = SentenceTransformer(SENTENCE_BERT_MODEL)
 
@@ -396,7 +396,7 @@ def main():
             "local_image": None,
         }
 
-        print("📷 Single-Image Mode\n")
+        print("[INFO] Single-Image Mode\n")
         print(f"  [1/4] Captioning image: {args.image}")
         caption = get_image_caption(args.image, api_key)
         print(f"        Caption: {caption}")
@@ -449,7 +449,7 @@ def main():
     user_agent = get_nominatim_user_agent()
 
     # Load metadata
-    print("📂 Step 1: Loading metadata...")
+ print("[INFO] Step 1: Loading metadata...")
     if not RAW_METADATA_PATH.exists():
         print(f"   Metadata not found: {RAW_METADATA_PATH}")
         print("   Run pull_data.py first.")
@@ -463,7 +463,7 @@ def main():
     print(f"   Records:  {len(records)}")
 
     # Process each record
-    print(f"\n📷 Step 2: Processing records (caption → geocode → describe)...")
+    print(f"\n[INFO] Step 2: Processing records (caption -> geocode -> describe)...")
     results = []
     for i, rec in enumerate(records):
         print(f"\n   --- Record {i+1}/{len(records)} ---")
@@ -474,30 +474,30 @@ def main():
             results.append(result)
 
     if not results:
-        print("\n⚠️  No records produced descriptions. Check data & API key.")
+        print("\n[WARN] No records produced descriptions. Check data & API key.")
         sys.exit(1)
 
     print(f"\n   Processed: {len(results)}/{len(records)} records")
 
     # Embed
-    print(f"\n🧠 Step 3: Embedding descriptions ({SENTENCE_BERT_MODEL})...")
+    print(f"\n[INFO] Step 3: Embedding descriptions ({SENTENCE_BERT_MODEL})...")
     sbert = SentenceTransformer(SENTENCE_BERT_MODEL)
     descriptions = [r["description"] for r in results]
     embeddings = embed_descriptions(descriptions, sbert)
     print(f"   Shape: {embeddings.shape}")
 
     # Store in ChromaDB
-    print(f"\n💾 Step 4: Storing in ChromaDB ({LOCATION_COLLECTION_NAME})...")
+    print(f"\n[INFO] Step 4: Storing in ChromaDB ({LOCATION_COLLECTION_NAME})...")
     collection = get_collection(LOCATION_COLLECTION_NAME)
     store_in_chromadb(collection, results, embeddings)
     print(f"   Collection size: {collection.count()}")
 
     # Cluster
-    print(f"\n🔗 Step 5: Clustering (DBSCAN eps={args.eps}, min_samples={args.min_samples})...")
+    print(f"\n[INFO] Step 5: Clustering (DBSCAN eps={args.eps}, min_samples={args.min_samples})...")
     labels = cluster_embeddings(embeddings, results, eps=args.eps, min_samples=args.min_samples)
 
     # Query demo
-    print(f"\n🔍 Step 6: Query demo...")
+    print(f"\n[INFO] Step 6: Query demo...")
     if len(results) >= 1:
         sample_desc = results[0]["description"]
         query_similar(collection, sample_desc, sbert, n_results=3)

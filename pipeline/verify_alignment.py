@@ -27,7 +27,7 @@ def main():
     print("=" * 60)
     
     # 1. Load SQLite
-    print("\n📂 Loading database...")
+    print("\n[INFO] Loading database...")
     conn = init_db()
     
     memory_count = conn.execute("SELECT count(*) FROM memories").fetchone()[0]
@@ -37,12 +37,12 @@ def main():
     print(f"   Master Manifest (VIEW): {manifest_count} rows")
     
     if memory_count == 0:
-        print("\n⚠️  No records in database. Run the pipeline first.")
+        print("\n[WARN] No records in database. Run the pipeline first.")
         conn.close()
         return
     
     # 2. Length Checks
-    print("\n📏 Checking table counts vs memories...")
+    print("\n[INFO] Checking table counts vs memories...")
     tables = {
         "emotion_scores": conn.execute("SELECT count(*) FROM emotion_scores").fetchone()[0],
         "temporal_features": conn.execute("SELECT count(*) FROM temporal_features").fetchone()[0],
@@ -50,19 +50,19 @@ def main():
     }
     
     for table, count in tables.items():
-        status = "✅" if count > 0 else "⚠️"
+        status = "[OK]" if count > 0 else "[WARN]"
         print(f"   {status} {table}: {count}")
     
     # 3. ChromaDB consistency
-    print("\n📦 Checking ChromaDB collections...")
+    print("\n[INFO] Checking ChromaDB collections...")
     for coll_name in [IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME]:
         collection = get_collection(coll_name)
         coll_count = collection.count()
-        status = "✅" if coll_count > 0 else "⚠️"
+        status = "[OK]" if coll_count > 0 else "[WARN]"
         print(f"   {status} {coll_name}: {coll_count} vectors")
     
     # 4. Semantic Sanity Check
-    print("\n🧠 Semantic Sanity Check (first caption)...")
+    print("\n[INFO] Semantic Sanity Check (first caption)...")
     caption_collection = get_collection(CAPTION_COLLECTION_NAME)
     
     if caption_collection.count() > 0:
@@ -97,20 +97,20 @@ def main():
                 print(f"   Cosine Similarity (Stored vs Re-computed): {sim:.4f}")
                 
                 if sim > 0.99:
-                    print("   ✅ Vector matches caption content!")
+                    print("   [OK] Vector matches caption content!")
                 else:
-                    print("   ❌ Vector mismatch!")
+                    print("   [ERROR] Vector mismatch!")
             else:
-                print(f"   ⚠️  Record {record_id} not found in ChromaDB")
+                print(f"   [WARN] Record {record_id} not found in ChromaDB")
         else:
-            print("   ⚠️  No captions found in database")
+            print("   [WARN] No captions found in database")
     else:
-        print("   ⚠️  Caption collection is empty")
+        print("   [WARN] Caption collection is empty")
     
     conn.close()
     
     print("\n" + "=" * 60)
-    print("✅ Verification Complete")
+    print("[OK] Verification Complete")
     print("=" * 60)
 
 

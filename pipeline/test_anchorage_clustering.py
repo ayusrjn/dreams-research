@@ -119,7 +119,7 @@ def _retry_gemini(func, *args, max_retries=3, base_wait=25, **kwargs):
                     "503" in err_str or "UNAVAILABLE" in err_str):
                 if attempt < max_retries:
                     wait = base_wait * (2 ** attempt)
-                    print(f"      ⏳ Rate limited, waiting {wait}s (retry {attempt+1}/{max_retries})...")
+                    print(f"      [WAIT] Rate limited, waiting {wait}s (retry {attempt+1}/{max_retries})...")
                     time.sleep(wait)
                     continue
             raise
@@ -130,18 +130,18 @@ def _retry_gemini(func, *args, max_retries=3, base_wait=25, **kwargs):
 # ---------------------------------------------------------------------------
 
 async def process_record(rec: dict, api_key: str, user_agent: str) -> dict | None:
-    """Run caption → geocode → describe for one record. Caches result on success."""
+    """Run caption -> geocode -> describe for one record. Caches result on success."""
 
     # Check cache first
     cached = load_cached(rec["id"])
     if cached:
-        print(f"   📦 {rec['id']} [{rec['category']}] (cached)")
+        print(f"   [INFO] {rec['id']} [{rec['category']}] (cached)")
         print(f"      Description: {cached['description']}")
         return cached
 
     image_path = TEST_DIR / rec["image"]
     if not image_path.exists():
-        print(f"   ⚠️  {rec['id']}: image {image_path} not found (skipped)")
+        print(f"   [WARN] {rec['id']}: image {image_path} not found (skipped)")
         return None
 
     lat, lon = rec["lat"], rec["lon"]
@@ -150,7 +150,7 @@ async def process_record(rec: dict, api_key: str, user_agent: str) -> dict | Non
     try:
         caption = _retry_gemini(get_image_caption, str(image_path), api_key)
     except Exception as e:
-        print(f"   ⚠️  {rec['id']}: captioning failed ({e})")
+        print(f"   [WARN] {rec['id']}: captioning failed ({e})")
         caption = None
 
     # Delay: respect Nominatim 1 req/sec + spread Gemini calls
@@ -160,7 +160,7 @@ async def process_record(rec: dict, api_key: str, user_agent: str) -> dict | Non
     try:
         geocode_data = await reverse_geocode(lat, lon, user_agent=user_agent)
     except Exception as e:
-        print(f"   ⚠️  {rec['id']}: geocoding failed ({e})")
+        print(f"   [WARN] {rec['id']}: geocoding failed ({e})")
         geocode_data = {"display_name": None, "address": None, "raw": None}
 
     # Delay before next Gemini call
@@ -173,15 +173,15 @@ async def process_record(rec: dict, api_key: str, user_agent: str) -> dict | Non
             lat, lon, geocode_data, api_key=api_key, caption=caption
         )
     except Exception as e:
-        print(f"   ⚠️  {rec['id']}: description failed ({e})")
+        print(f"   [WARN] {rec['id']}: description failed ({e})")
         description = None
 
     if not description:
-        print(f"   ⚠️  {rec['id']}: no description produced (skipped)")
+        print(f"   [WARN] {rec['id']}: no description produced (skipped)")
         return None
 
     display_name = geocode_data.get("display_name") or "(unknown)"
-    print(f"   ✅ {rec['id']} [{rec['category']}]")
+    print(f"   [OK] {rec['id']} [{rec['category']}]")
     print(f"      Location:    {display_name}")
     print(f"      Caption:     {caption}")
     print(f"      Description: {description}")
@@ -276,48 +276,48 @@ def main():
     print(f"   Remaining API calls needed: ~{remaining * 2} (caption + description each)\n")
 
     # --- Step 1: Process records ---
-    print("📷  Step 1/5: Processing records (caption → geocode → describe)\n")
+    print("[INFO] Step 1/5: Processing records (caption -> geocode -> describe)\n")
     results = []
     for i, rec in enumerate(TEST_RECORDS):
         print(f"\n   --- Record {i+1}/{len(TEST_RECORDS)} ---")
         if args.cached:
             cached = load_cached(rec["id"])
             if cached:
-                print(f"   📦 {rec['id']} [{rec['category']}] (cached)")
+                print(f"   [INFO] {rec['id']} [{rec['category']}] (cached)")
                 print(f"      Description: {cached['description']}")
                 results.append(cached)
             else:
-                print(f"   ⏭️  {rec['id']}: not cached (skipping in --cached mode)")
+                print(f"   [SKIP] {rec['id']}: not cached (skipping in --cached mode)")
         else:
             result = asyncio.run(process_record(rec, api_key, user_agent))
             if result:
                 results.append(result)
 
     if not results:
-        print("\n⚠️  No records produced descriptions. Aborting.")
+        print("\n[WARN] No records produced descriptions. Aborting.")
         sys.exit(1)
 
     print(f"\n   Processed: {len(results)}/{len(TEST_RECORDS)}")
 
     # --- Step 2: Embed ---
-    print(f"\n🧠  Step 2/5: Embedding ({SENTENCE_BERT_MODEL})...")
+    print(f"\n[INFO] Step 2/5: Embedding ({SENTENCE_BERT_MODEL})...")
     sbert = SentenceTransformer(SENTENCE_BERT_MODEL)
     descriptions = [r["description"] for r in results]
     embeddings = embed_descriptions(descriptions, sbert)
     print(f"   Shape: {embeddings.shape}")
 
     # --- Step 3: ChromaDB ---
-    print(f"\n💾  Step 3/5: Storing in ChromaDB ({LOCATION_COLLECTION_NAME})...")
+    print(f"\n[INFO] Step 3/5: Storing in ChromaDB ({LOCATION_COLLECTION_NAME})...")
     collection = get_collection(LOCATION_COLLECTION_NAME)
     store_in_chromadb(collection, results, embeddings)
     print(f"   Collection size: {collection.count()}")
 
     # --- Step 4: Cluster ---
-    print(f"\n🔗  Step 4/5: DBSCAN clustering (eps=0.35, min_samples=2)...")
+    print(f"\n[INFO] Step 4/5: DBSCAN clustering (eps=0.35, min_samples=2)...")
     labels = cluster_embeddings(embeddings, results, eps=0.35, min_samples=2)
 
     # --- Step 5: Evaluate ---
-    print(f"\n📊  Step 5/5: Evaluating cluster quality...\n")
+    print(f"\n[INFO] Step 5/5: Evaluating cluster quality...\n")
     report = evaluate_clusters(results, labels)
 
     print("   " + "-" * 55)
@@ -326,8 +326,8 @@ def main():
     print("   " + "-" * 55)
 
     for cat, info in report["categories"].items():
-        tag = "✅" if info["homogeneous"] else "⚠️ "
-        print(f"   {tag} {cat:12s} → clusters {info['unique_cluster_labels']}  records: {info['records']}")
+        tag = "[OK]" if info["homogeneous"] else "[WARN] "
+        print(f"   {tag} {cat:12s} -> clusters {info['unique_cluster_labels']}  records: {info['records']}")
 
     # --- Save report ---
     output_path = PROCESSED_DIR / "anchorage_test_report.json"
@@ -343,7 +343,7 @@ def main():
     print(f"\n   Full report saved: {output_path}")
 
     # --- Similarity matrix ---
-    print("\n📐  Cosine similarity matrix:\n")
+    print("\n[INFO] Cosine similarity matrix:\n")
     sim = np.dot(embeddings, embeddings.T)
     ids = [r["id"] for r in results]
 

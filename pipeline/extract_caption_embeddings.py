@@ -28,7 +28,7 @@ from db import get_collection
 def load_metadata() -> dict:
     """Load the frozen snapshot metadata."""
     if not RAW_METADATA_PATH.exists():
-        print(f"❌ Metadata not found: {RAW_METADATA_PATH}")
+        print(f"[ERROR] Metadata not found: {RAW_METADATA_PATH}")
         print("   Run Phase 1 first: python pipeline/pull_data.py")
         sys.exit(1)
     
@@ -55,7 +55,7 @@ def preprocess_caption(text: str) -> str:
 
 def load_sentence_bert() -> SentenceTransformer:
     """Load Sentence-BERT model."""
-    print(f"🔧 Loading Sentence-BERT model: {SENTENCE_BERT_MODEL}")
+    print(f"[INFO] Loading Sentence-BERT model: {SENTENCE_BERT_MODEL}")
     model = SentenceTransformer(SENTENCE_BERT_MODEL)
     return model
 
@@ -71,20 +71,20 @@ def extract_embeddings(metadata: dict, model: SentenceTransformer) -> tuple[list
     captions = []
     record_infos = []
     
-    print(f"📝 Processing {len(records)} records...")
+ print(f" Processing {len(records)} records...")
     
     for record in records:
         record_id = record.get("id")
         raw_caption = record.get("caption", "")
         
         if not raw_caption or raw_caption == "[REDACTED]":
-            print(f"   ⚠️  Record {record_id}: No valid caption (skipped)")
+            print(f"   [WARN] Record {record_id}: No valid caption (skipped)")
             continue
         
         caption = preprocess_caption(raw_caption)
         
         if not caption:
-            print(f"   ⚠️  Record {record_id}: Empty after preprocessing (skipped)")
+            print(f"   [WARN] Record {record_id}: Empty after preprocessing (skipped)")
             continue
         
         captions.append(caption)
@@ -93,13 +93,13 @@ def extract_embeddings(metadata: dict, model: SentenceTransformer) -> tuple[list
             "user_id": record.get("user_id"),
             "caption": caption,
         })
-        print(f"   ✅ Record {record_id}: '{caption[:50]}{'...' if len(caption) > 50 else ''}'")
+        print(f"   [OK] Record {record_id}: '{caption[:50]}{'...' if len(caption) > 50 else ''}'")
     
     if not captions:
         return [], np.array([])
     
     # Batch encode all captions
-    print(f"\n🧠 Encoding {len(captions)} captions...")
+    print(f"\n[INFO] Encoding {len(captions)} captions...")
     embeddings = model.encode(
         captions,
         convert_to_numpy=True,
@@ -125,7 +125,7 @@ def store_embeddings(record_infos: list[dict], embeddings: np.ndarray) -> None:
         metadatas=metadatas,
     )
     
-    print(f"💾 Stored {len(ids)} embeddings in ChromaDB ({CAPTION_COLLECTION_NAME})")
+    print(f"[INFO] Stored {len(ids)} embeddings in ChromaDB ({CAPTION_COLLECTION_NAME})")
     print(f"   Collection size: {collection.count()}")
 
 
@@ -137,35 +137,35 @@ def main():
     print()
     
     # Step 1: Load metadata
-    print("📂 Step 1: Loading metadata...")
+ print("[INFO] Step 1: Loading metadata...")
     metadata = load_metadata()
     print(f"   Snapshot: {metadata.get('snapshot_id')}")
     print(f"   Records: {metadata.get('record_count')}")
     
     # Step 2: Load Sentence-BERT model
-    print("\n🧠 Step 2: Loading Sentence-BERT model...")
+    print("\n[INFO] Step 2: Loading Sentence-BERT model...")
     model = load_sentence_bert()
     
     # Step 3: Extract embeddings
-    print("\n🔍 Step 3: Extracting embeddings...")
+    print("\n[INFO] Step 3: Extracting embeddings...")
     record_infos, embeddings = extract_embeddings(metadata, model)
     
     if len(embeddings) == 0:
-        print("\n⚠️  No embeddings extracted. Check your captions.")
+        print("\n[WARN] No embeddings extracted. Check your captions.")
         print("   Note: [REDACTED] captions are skipped.")
         return
     
     # Step 4: Store in ChromaDB
-    print("\n💾 Step 4: Storing in ChromaDB...")
+    print("\n[INFO] Step 4: Storing in ChromaDB...")
     store_embeddings(record_infos, embeddings)
     
     # Summary
     print("\n" + "=" * 60)
-    print("✅ Phase 2B Complete!")
+    print("[OK] Phase 2B Complete!")
     print("=" * 60)
-    print(f"   📊 Embeddings: {embeddings.shape[0]} captions")
-    print(f"   📐 Dimensions: {embeddings.shape[1]}")
-    print(f"   💾 Collection: {CAPTION_COLLECTION_NAME}")
+    print(f"   [INFO] Embeddings: {embeddings.shape[0]} captions")
+    print(f"   [INFO] Dimensions: {embeddings.shape[1]}")
+    print(f"   [INFO] Collection: {CAPTION_COLLECTION_NAME}")
 
 
 if __name__ == "__main__":
