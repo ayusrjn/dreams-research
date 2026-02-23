@@ -101,7 +101,7 @@ def generate_description(
     prompt = _build_prompt(lat, lon, geocode_data, caption=caption)
 
     response = client.models.generate_content(
-        model="gemini-3-flash-preview",
+        model="gemini-2.5-flash",
         contents=prompt,
     )
 

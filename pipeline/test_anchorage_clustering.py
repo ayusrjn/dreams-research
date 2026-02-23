@@ -114,9 +114,14 @@ def _retry_gemini(func, *args, max_retries=3, base_wait=25, **kwargs):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            err_str = str(e)
-            if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str or
-                    "503" in err_str or "UNAVAILABLE" in err_str):
+            err_str = str(e).lower()
+            
+            if "quota" in err_str and "exceeded" in err_str:
+                print(f"      [ERROR] Hard quota exceeded on API key. Aborting retries.")
+                raise e
+                
+            if ("429" in err_str or "resource_exhausted" in err_str or
+                    "503" in err_str or "unavailable" in err_str):
                 if attempt < max_retries:
                     wait = base_wait * (2 ** attempt)
                     print(f"      [WAIT] Rate limited, waiting {wait}s (retry {attempt+1}/{max_retries})...")

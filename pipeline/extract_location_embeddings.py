@@ -38,56 +38,60 @@ from location_semantic import (
     get_gemini_api_key,
     get_nominatim_user_agent,
 )
-from google import genai
+from PIL import Image
+import torch
+from transformers import BlipProcessor, BlipForConditionalGeneration
 
 
 # ---------------------------------------------------------------------------
-# Image captioning (Gemini Vision)
+# Global BLIP Model (Loaded on-demand)
+# ---------------------------------------------------------------------------
+_blip_processor = None
+_blip_model = None
+_blip_device = "cpu"
+
+def load_blip_model():
+    """Load the BLIP model locally for free image captioning."""
+    global _blip_processor, _blip_model, _blip_device
+    if _blip_processor is None:
+        print("[INFO] Loading local BLIP image captioning model (Salesforce/blip-image-captioning-base)...")
+        _blip_device = "cuda" if torch.cuda.is_available() else "cpu"
+        _blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+        _blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to(_blip_device)
+        _blip_model.eval()
+    return _blip_processor, _blip_model
+
+
+# ---------------------------------------------------------------------------
+# Image captioning (Local BLIP)
 # ---------------------------------------------------------------------------
 
-def get_image_caption(image_path: str, api_key: str) -> str:
-    """Generate a short caption for an image using Gemini vision model."""
+def get_image_caption(image_path: str) -> str:
+    """Generate a short caption for an image using a local BLIP model."""
     image_path = Path(image_path)
     if not image_path.exists():
         raise FileNotFoundError(f"Image not found: {image_path}")
 
-    mime_type = mimetypes.guess_type(str(image_path))[0] or "image/jpeg"
-    image_bytes = image_path.read_bytes()
-    image_b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
-
-    client = genai.Client(api_key=api_key)
-
-    response = client.models.generate_content(
-        model="gemini-3-flash-preview",
-        contents=[
-            {
-                "role": "user",
-                "parts": [
-                    {
-                        "inline_data": {
-                            "mime_type": mime_type,
-                            "data": image_b64,
-                        }
-                    },
-                    {
-                        "text": (
-                            "You are a visual scene classification assistant.\n\n"
-                            "Describe the environment shown in this image in ONE concise sentence (max 25 words).\n\n"
-                            "Focus only on:\n"
-                            "- Type of place (e.g., hospital, church, restaurant, park, residential building)\n"
-                            "- Setting (urban, rural, indoor, outdoor)\n"
-                            "- Functional purpose if identifiable\n\n"
-                            "Do NOT describe emotions, artistic style, or speculation.\n"
-                            "Be factual and precise.\n"
-                            "Return only the sentence."
-                        ),
-                    },
-                ],
-            }
-        ],
-    )
-
-    return response.text.strip()
+    processor, model = load_blip_model()
+    
+    with Image.open(image_path) as img:
+        # Convert to RGB if needed (e.g., RGBA or grayscale)
+        raw_image = img.convert('RGB')
+        
+    # Process image
+    inputs = processor(images=raw_image, return_tensors="pt").to(_blip_device)
+    
+    # Generate caption (we want a short summary similar to what Gemini gave)
+    with torch.no_grad():
+        out = model.generate(
+            **inputs,
+            max_new_tokens=25,
+            min_new_tokens=5,
+            num_beams=3
+        )
+        
+    caption = processor.decode(out[0], skip_special_tokens=True).strip()
+    return caption
 
 
 # ---------------------------------------------------------------------------
@@ -100,11 +104,19 @@ def _retry_api(func, *args, max_retries=3, base_wait=25, **kwargs):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            err_str = str(e)
+            err_str = str(e).lower()
+            
+            # Check for hard quota exhaustion first
+            if "quota" in err_str and "exceeded" in err_str:
+                print(f"      [ERROR] Hard quota exceeded on API key. Aborting retries.")
+                raise e
+            
+            # Otherwise, check for normal rate limits (per minute/day constraints)
             is_rate_limit = (
-                "429" in err_str or "RESOURCE_EXHAUSTED" in err_str
-                or "503" in err_str or "UNAVAILABLE" in err_str
+                "429" in err_str or "resource_exhausted" in err_str
+                or "503" in err_str or "unavailable" in err_str
             )
+            
             if is_rate_limit and attempt < max_retries:
                 wait = base_wait * (2 ** attempt)
                 print(f"      [WAIT] Rate limited, waiting {wait}s (retry {attempt+1}/{max_retries})...")
@@ -172,15 +184,15 @@ async def process_single_record(
         print(f"   [WARN] Record {record_id}: Image not found (skipped)")
         return None
 
-    # 1) Caption
+    # 1) Caption (Local, no retry needed)
     try:
-        caption = _retry_api(get_image_caption, str(image_path), api_key)
+        caption = get_image_caption(str(image_path))
     except Exception as e:
         print(f"   [WARN] Record {record_id}: Captioning failed ({e})")
         caption = None
 
-    # Delay: respect Nominatim 1 req/sec + spread Gemini calls
-    time.sleep(5)
+    # Delay: respect Nominatim 1 req/sec
+    time.sleep(2)
 
     # 2) Geocode
     try:
@@ -189,8 +201,8 @@ async def process_single_record(
         print(f"   [WARN] Record {record_id}: Geocoding failed ({e})")
         geocode_data = {"display_name": None, "address": None, "raw": None}
 
-    # Delay before next Gemini call
-    time.sleep(10)
+    # Delay before Gemini call
+    time.sleep(2)
 
     # 3) Description
     try:
@@ -309,8 +321,8 @@ def main():
 
         # Delay between records to stay within Gemini rate limits
         if i < len(records) - 1:
-            print("   [WAIT] Pausing 10s before next record...")
-            time.sleep(10)
+            print("   [WAIT] Pausing 5s before next record...")
+            time.sleep(5)
 
     if not results:
         print("\n[WARN] No descriptions extracted. Check your images and API key.")

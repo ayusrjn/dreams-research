@@ -65,7 +65,7 @@ def get_image_caption(image_path: str, api_key: str) -> str:
     client = genai.Client(api_key=api_key)
 
     response = client.models.generate_content(
-        model="gemini-3-flash-preview",
+        model="gemini-2.5-flash",
         contents=[
             {
                 "role": "user",
