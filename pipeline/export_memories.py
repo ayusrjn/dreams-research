@@ -71,7 +71,7 @@ def main():
         log.error("MONGO_URI not set")
         sys.exit(1)
 
-    uri = fix_mongo_uri(uri)
+    
     try:
         client = MongoClient(uri, serverSelectionTimeoutMS=5000, tls=True, tlsCAFile=certifi.where())
         try:
