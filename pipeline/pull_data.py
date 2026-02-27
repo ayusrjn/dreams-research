@@ -48,9 +48,13 @@ def run(logger: logging.Logger | None = None) -> dict:
         if not data.get("success"):
             log.error("D1 API returned unsuccessful response")
             return {"records_processed": 0, "status": "error"}
-        records = data.get("result", [{}])[0].get("results", [])
-    except requests.RequestException as e:
-        log.error("D1 API request failed: %s", e)
+        result = data.get("result")
+        if not isinstance(result, list) or len(result) == 0 or not isinstance(result[0], dict):
+            log.error("D1 API returned unexpected payload shape")
+            return {"records_processed": 0, "status": "error"}
+        records = result[0].get("results", [])
+    except (requests.RequestException, ValueError, KeyError, IndexError, TypeError) as e:
+        log.error("D1 API request/parse failed: %s", e)
         return {"records_processed": 0, "status": "error"}
 
     if not records:

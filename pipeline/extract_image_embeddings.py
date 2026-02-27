@@ -50,8 +50,12 @@ def run(logger: logging.Logger | None = None) -> dict:
                 image_input = preprocess(img.convert("RGB")).unsqueeze(0).to(device)
             with torch.no_grad():
                 emb = model.encode_image(image_input).cpu().numpy().flatten()
+            rid = record.get("id")
+            if rid is None or str(rid).strip() == "":
+                log.warning("Skipping record with missing ID (image: %s)", local_image)
+                continue
             embeddings.append(emb)
-            record_infos.append({"id": str(record.get("id")), "user_id": record.get("user_id"), "local_image": local_image})
+            record_infos.append({"id": str(rid), "user_id": record.get("user_id"), "local_image": local_image})
         except Exception as exc:
             log.warning("Failed to encode image for record %s: %s", record.get("id"), exc)
 

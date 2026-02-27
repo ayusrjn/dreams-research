@@ -203,17 +203,20 @@ def main():
             result = fn(logger)
             elapsed = time.time() - t0
 
-            record_step_done(run_id, step_name, records=result.get("records_processed", 0))
+            records = result.get("records_processed", 0)
+            if result.get("status") == "error":
+                record_step_done(run_id, step_name, records=records, error=result.get("error", "step returned error"))
+                had_error = True
+                logger.error("Step '%s' failed", step_name)
+            else:
+                record_step_done(run_id, step_name, records=records)
+
             summary.append({
                 "step": step_name,
                 "status": result.get("status", "ok"),
-                "records": result.get("records_processed", 0),
+                "records": records,
                 "duration": elapsed,
             })
-
-            if result.get("status") == "error":
-                had_error = True
-                logger.error("Step '%s' failed", step_name)
 
         except Exception as exc:
             elapsed = time.time() - t0

@@ -27,23 +27,35 @@ def format_geocode_data(geocode_data: dict) -> str:
     address = geocode_data.get("address", {})
 
     parts = []
-    if "city" in address: parts.append(f"City: {address['city']}")
-    elif "town" in address: parts.append(f"Town: {address['town']}")
-    elif "village" in address: parts.append(f"Village: {address['village']}")
-    elif "county" in address: parts.append(f"County: {address['county']}")
+    if "city" in address:
+        parts.append(f"City: {address['city']}")
+    elif "town" in address:
+        parts.append(f"Town: {address['town']}")
+    elif "village" in address:
+        parts.append(f"Village: {address['village']}")
+    elif "county" in address:
+        parts.append(f"County: {address['county']}")
 
-    if "suburb" in address: parts.append(f"Suburb: {address['suburb']}")
-    elif "neighbourhood" in address: parts.append(f"Neighbourhood: {address['neighbourhood']}")
+    if "suburb" in address:
+        parts.append(f"Suburb: {address['suburb']}")
+    elif "neighbourhood" in address:
+        parts.append(f"Neighbourhood: {address['neighbourhood']}")
 
     place_type = raw.get("type", "").replace("_", " ")
     place_category = raw.get("category", "").replace("_", " ")
-    if place_type: parts.append(f"Type: {place_type}")
-    if place_category: parts.append(f"Category: {place_category}")
+    if place_type:
+        parts.append(f"Type: {place_type}")
+    if place_category:
+        parts.append(f"Category: {place_category}")
 
-    if "amenity" in address: parts.append(f"Amenity: {address['amenity'].replace('_', ' ')}")
-    if "building" in address: parts.append(f"Building: {address['building'].replace('_', ' ')}")
-    if "leisure" in address: parts.append(f"Leisure: {address['leisure'].replace('_', ' ')}")
-    if "natural" in address: parts.append(f"Natural: {address['natural'].replace('_', ' ')}")
+    if "amenity" in address:
+        parts.append(f"Amenity: {address['amenity'].replace('_', ' ')}")
+    if "building" in address:
+        parts.append(f"Building: {address['building'].replace('_', ' ')}")
+    if "leisure" in address:
+        parts.append(f"Leisure: {address['leisure'].replace('_', ' ')}")
+    if "natural" in address:
+        parts.append(f"Natural: {address['natural'].replace('_', ' ')}")
 
     # Remove duplicates
     seen = set()
@@ -59,7 +71,6 @@ async def process_metadata(rec, ua, log):
     img_path = next((p for p in [RAW_IMAGES_DIR / rec.get("local_image", ""), RAW_IMAGES_DIR / f"{rec.get('id')}.jpg", RAW_IMAGES_DIR / f"{rec.get('id')}.png"] if p.exists()), None)
     if not img_path: return None
 
-    time.sleep(1.5) # respect rate limit to nominatim
     try: geocode = await reverse_geocode(lat, lon, user_agent=ua)
     except Exception as e:
         log.warning("Geocoding failed for record %s: %s", rec.get("id"), e)
@@ -94,7 +105,11 @@ def run(logger: logging.Logger | None = None) -> dict:
 
     ua = get_nominatim_user_agent()
     log.info("Loaded %d records. Reverse geocoding...", len(records))
-    results = [res for rec in records if (res := asyncio.run(process_metadata(rec, ua, log)))]
+
+    async def _geocode_all():
+        return [res for rec in records if (res := await process_metadata(rec, ua, log))]
+
+    results = asyncio.run(_geocode_all())
 
     if not results:
         log.warning("No valid records found for location embedding")

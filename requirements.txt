@@ -3,6 +3,7 @@ fastapi==0.133.1
 httpx==0.28.1
 numpy==2.4.2
 pandas==3.0.1
+pyarrow>=15.0
 Pillow==12.1.1
 pydantic==2.12.5
 pydantic_settings==2.13.1

@@ -40,9 +40,13 @@ def run(logger: logging.Logger | None = None) -> dict:
         if not caption:
             continue
 
+        rid = record.get("id")
+        if rid is None or str(rid).strip() == "":
+            continue
+
         captions.append(caption)
         record_infos.append({
-            "id": str(record.get("id")),
+            "id": str(rid),
             "user_id": record.get("user_id"),
             "caption": caption,
         })

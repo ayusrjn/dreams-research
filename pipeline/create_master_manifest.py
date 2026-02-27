@@ -16,36 +16,41 @@ def run(logger: logging.Logger | None = None, export: bool = False) -> dict:
     log = logger or logging.getLogger(__name__)
 
     conn = init_db()
-
     counts = {}
-    for table in ["memories", "emotion_scores", "temporal_features", "location_descriptions", "master_manifest"]:
-        count = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
-        log.info("  %s: %d rows", table, count)
-        counts[table] = count
 
-    for col in ["valence", "arousal", "sin_hour"]:
-        nulls = conn.execute(f"SELECT count(*) FROM master_manifest WHERE {col} IS NULL").fetchone()[0]
-        if nulls > 0:
-            log.info("  %s NULLs: %d", col, nulls)
+    try:
+        for table in ["memories", "emotion_scores", "temporal_features", "location_descriptions", "master_manifest"]:
+            count = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
+            log.info("  %s: %d rows", table, count)
+            counts[table] = count
 
-    for coll in [IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME, LOCATION_COLLECTION_NAME]:
-        count = get_collection(coll).count()
-        log.info("  %s: %d vectors", coll, count)
-        counts[coll] = count
+        for col in ["valence", "arousal", "sin_hour"]:
+            nulls = conn.execute(f"SELECT count(*) FROM master_manifest WHERE {col} IS NULL").fetchone()[0]
+            if nulls > 0:
+                log.info("  %s NULLs: %d", col, nulls)
 
-    row = conn.execute("SELECT * FROM master_manifest LIMIT 1").fetchone()
-    if row:
-        cols = [d[0] for d in conn.execute("SELECT * FROM master_manifest LIMIT 0").description]
-        non_null = sum(1 for v in row if v is not None)
-        log.info("  Sample row: %d / %d columns populated", non_null, len(cols))
+        for coll in [IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME, LOCATION_COLLECTION_NAME]:
+            count = get_collection(coll).count()
+            log.info("  %s: %d vectors", coll, count)
+            counts[coll] = count
 
-    if export:
-        import pandas as pd
-        out_path = PROCESSED_DIR / "master_manifest.parquet"
-        pd.read_sql_query("SELECT * FROM master_manifest", conn).to_parquet(out_path, index=False)
-        log.info("Exported manifest to %s", out_path)
+        row = conn.execute("SELECT * FROM master_manifest LIMIT 1").fetchone()
+        if row:
+            cols = [d[0] for d in conn.execute("SELECT * FROM master_manifest LIMIT 0").description]
+            non_null = sum(1 for v in row if v is not None)
+            log.info("  Sample row: %d / %d columns populated", non_null, len(cols))
 
-    conn.close()
+        if export:
+            import pandas as pd
+            out_path = PROCESSED_DIR / "master_manifest.parquet"
+            pd.read_sql_query("SELECT * FROM master_manifest", conn).to_parquet(out_path, index=False)
+            log.info("Exported manifest to %s", out_path)
+
+    except Exception as e:
+        log.error("Manifest report failed: %s", e)
+        return {"records_processed": counts.get("master_manifest", 0), "status": "error", "error": str(e)}
+    finally:
+        conn.close()
 
     log.info("Manifest report complete")
     return {"records_processed": counts.get("master_manifest", 0), "status": "ok"}

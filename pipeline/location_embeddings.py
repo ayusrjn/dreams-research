@@ -26,37 +26,53 @@ def format_geocode_data(geocode_data: dict) -> str:
     address = geocode_data.get("address", {})
     
     parts = []
-    if "city" in address: parts.append(f"City: {address['city']}")
-    elif "town" in address: parts.append(f"Town: {address['town']}")
-    elif "village" in address: parts.append(f"Village: {address['village']}")
-    elif "county" in address: parts.append(f"County: {address['county']}")
-    
-    if "suburb" in address: parts.append(f"Suburb: {address['suburb']}")
-    elif "neighbourhood" in address: parts.append(f"Neighbourhood: {address['neighbourhood']}")
-    
+    if "city" in address:
+        parts.append(f"City: {address['city']}")
+    elif "town" in address:
+        parts.append(f"Town: {address['town']}")
+    elif "village" in address:
+        parts.append(f"Village: {address['village']}")
+    elif "county" in address:
+        parts.append(f"County: {address['county']}")
+
+    if "suburb" in address:
+        parts.append(f"Suburb: {address['suburb']}")
+    elif "neighbourhood" in address:
+        parts.append(f"Neighbourhood: {address['neighbourhood']}")
+
     place_type = raw.get("type", "").replace("_", " ")
     place_category = raw.get("category", "").replace("_", " ")
-    if place_type: parts.append(f"Type: {place_type}")
-    if place_category: parts.append(f"Category: {place_category}")
-    
-    if "amenity" in address: parts.append(f"Amenity: {address['amenity'].replace('_', ' ')}")
-    if "building" in address: parts.append(f"Building: {address['building'].replace('_', ' ')}")
-    if "leisure" in address: parts.append(f"Leisure: {address['leisure'].replace('_', ' ')}")
-    if "natural" in address: parts.append(f"Natural: {address['natural'].replace('_', ' ')}")
-    
+    if place_type:
+        parts.append(f"Type: {place_type}")
+    if place_category:
+        parts.append(f"Category: {place_category}")
+
+    if "amenity" in address:
+        parts.append(f"Amenity: {address['amenity'].replace('_', ' ')}")
+    if "building" in address:
+        parts.append(f"Building: {address['building'].replace('_', ' ')}")
+    if "leisure" in address:
+        parts.append(f"Leisure: {address['leisure'].replace('_', ' ')}")
+    if "natural" in address:
+        parts.append(f"Natural: {address['natural'].replace('_', ' ')}")
+
     seen = set()
     unique_parts = [x for x in parts if not (x in seen or seen.add(x))]
     return "Location characteristics: " + ", ".join(unique_parts) if unique_parts else "Unknown location without specific geographic features"
 
 async def process(rec, ua):
-    if (lat := rec.get("lat")) is None or (lon := rec.get("lon")) is None: return None
+    if (lat := rec.get("lat")) is None or (lon := rec.get("lon")) is None:
+        return None
     lat, lon = float(lat), float(lon)
 
     img_path = next((p for p in [RAW_IMAGES_DIR / rec.get("local_image", ""), RAW_IMAGES_DIR / f"{rec.get('id')}.jpg", RAW_IMAGES_DIR / f"{rec.get('id')}.png"] if p.exists()), None)
-    if not img_path: return None
+    if not img_path:
+        return None
 
-    try: geo = await reverse_geocode(lat, lon, user_agent=ua)
-    except Exception: geo = {"display_name": None, "address": None, "raw": None}
+    try:
+        geo = await reverse_geocode(lat, lon, user_agent=ua)
+    except Exception:
+        geo = {"display_name": None, "address": None, "raw": None}
 
     desc = format_geocode_data(geo)
 

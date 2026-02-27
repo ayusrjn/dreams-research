@@ -17,6 +17,20 @@ METADATA_PATH = RAW_DIR / "metadata.json"
 SNAPSHOTS_DIR = BASE_DIR / "data" / "snapshots"
 
 
+def _safe_int(val, default=0):
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return default
+
+
+def _safe_float(val, default=0.0):
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
 def run(csv_path: Path, logger: logging.Logger | None = None) -> dict:
     """Ingest a CSV dataset into SQLite and create a snapshot.
 
@@ -53,17 +67,20 @@ def run(csv_path: Path, logger: logging.Logger | None = None) -> dict:
             clean_uid = Path(uid).name.replace("..", "_").replace("/", "_").replace("\\", "_") or "unknown"
             (user_dir := IMAGES_DIR / clean_uid).mkdir(parents=True, exist_ok=True)
 
-            src_path = image_source_dir / src
+            src_path = (image_source_dir / src).resolve()
+            if not src_path.is_relative_to(image_source_dir.resolve()):
+                log.warning("Skipping image with path traversal: %s", src)
+                continue
             if src_path.exists():
-                dst = user_dir / f"img_{int(r.get('id', 0)):03d}{src_path.suffix or '.jpg'}"
+                dst = user_dir / f"img_{_safe_int(r.get('id', 0)):03d}{src_path.suffix or '.jpg'}"
                 shutil.copy2(src_path, dst)
                 local_img = f"{clean_uid}/{dst.name}"
                 stats[uid]["images"] += 1
 
         processed.append({
-            "id": int(r.get("id", 0)), "user_id": uid, "caption": r.get("caption", ""),
-            "timestamp": r.get("date", ""), "lat": float(r.get("latitude", 0)),
-            "lon": float(r.get("longitude", 0)), "image_url": r.get("image_url", ""),
+            "id": _safe_int(r.get("id", 0)), "user_id": uid, "caption": r.get("caption", ""),
+            "timestamp": r.get("date", ""), "lat": _safe_float(r.get("latitude", 0)),
+            "lon": _safe_float(r.get("longitude", 0)), "image_url": r.get("image_url", ""),
             "local_image": local_img, "snapshot_id": now.strftime("snapshot_%Y_%m_%d"),
             "created_at": iso_time
         })
