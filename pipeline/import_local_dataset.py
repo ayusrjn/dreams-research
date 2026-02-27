@@ -15,7 +15,6 @@ RAW_DIR = BASE_DIR / "data" / "raw"
 IMAGES_DIR = RAW_DIR / "images"
 METADATA_PATH = RAW_DIR / "metadata.json"
 SNAPSHOTS_DIR = BASE_DIR / "data" / "snapshots"
-TEST_ANCHORAGE_DIR = RAW_DIR / "test_anchorage"
 
 
 def run(csv_path: Path, logger: logging.Logger | None = None) -> dict:
@@ -29,6 +28,8 @@ def run(csv_path: Path, logger: logging.Logger | None = None) -> dict:
     if not csv_path.exists():
         log.error("CSV file not found: %s", csv_path)
         return {"records_processed": 0, "status": "error"}
+
+    image_source_dir = csv_path.parent / "images"
 
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -52,7 +53,7 @@ def run(csv_path: Path, logger: logging.Logger | None = None) -> dict:
             clean_uid = Path(uid).name.replace("..", "_").replace("/", "_").replace("\\", "_") or "unknown"
             (user_dir := IMAGES_DIR / clean_uid).mkdir(parents=True, exist_ok=True)
 
-            src_path = TEST_ANCHORAGE_DIR / src
+            src_path = image_source_dir / src
             if src_path.exists():
                 dst = user_dir / f"img_{int(r.get('id', 0)):03d}{src_path.suffix or '.jpg'}"
                 shutil.copy2(src_path, dst)
