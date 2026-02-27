@@ -1,5 +1,6 @@
 import csv
 import json
+import logging
 import shutil
 import sys
 import argparse
@@ -16,35 +17,41 @@ METADATA_PATH = RAW_DIR / "metadata.json"
 SNAPSHOTS_DIR = BASE_DIR / "data" / "snapshots"
 TEST_ANCHORAGE_DIR = RAW_DIR / "test_anchorage"
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("csv_file")
-    csv_path = Path(parser.parse_args().csv_file)
-    
+
+def run(csv_path: Path, logger: logging.Logger | None = None) -> dict:
+    """Ingest a CSV dataset into SQLite and create a snapshot.
+
+    Returns dict with keys: records_processed, status.
+    """
+    log = logger or logging.getLogger(__name__)
+
+    csv_path = Path(csv_path)
     if not csv_path.exists():
-        sys.exit(1)
+        log.error("CSV file not found: %s", csv_path)
+        return {"records_processed": 0, "status": "error"}
 
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     with open(csv_path, "r", encoding="utf-8") as f:
         records = list(csv.DictReader(f))
-        
+
     if not records:
-        return
+        log.warning("CSV file is empty")
+        return {"records_processed": 0, "status": "skipped"}
 
     processed, stats, now = [], {}, datetime.utcnow()
     iso_time = now.isoformat() + "Z"
-    
+
     for r in records:
         uid = r.get("user_id", "unknown")
         stats.setdefault(uid, {"count": 0, "images": 0})["count"] += 1
-        
+
         local_img = None
         if src := r.get("image_filename"):
             clean_uid = Path(uid).name.replace("..", "_").replace("/", "_").replace("\\", "_") or "unknown"
             (user_dir := IMAGES_DIR / clean_uid).mkdir(parents=True, exist_ok=True)
-            
+
             src_path = TEST_ANCHORAGE_DIR / src
             if src_path.exists():
                 dst = user_dir / f"img_{int(r.get('id', 0)):03d}{src_path.suffix or '.jpg'}"
@@ -61,7 +68,7 @@ def main():
         })
 
     snapshot = {"snapshot_id": processed[0]["snapshot_id"], "created_at": iso_time, "record_count": len(processed), "user_count": len(stats), "user_stats": stats, "records": processed}
-    
+
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     with open(METADATA_PATH, "w") as f:
         json.dump(snapshot, f, indent=2, default=str)
@@ -69,7 +76,7 @@ def main():
     conn = init_db()
     for t in ("emotion_scores", "temporal_features", "location_descriptions", "memories"):
         conn.execute(f"DELETE FROM {t}")
-        
+
     for r in processed:
         conn.execute("INSERT OR REPLACE INTO memories (id, user_id, caption, timestamp, lat, lon, image_url, local_image, snapshot_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                      (r["id"], r["user_id"], r["caption"], r["timestamp"], r["lat"], r["lon"], r["image_url"], r["local_image"], r["snapshot_id"], r["created_at"]))
@@ -78,12 +85,27 @@ def main():
 
     snap_dir = SNAPSHOTS_DIR / (snapshot["snapshot_id"] if not (SNAPSHOTS_DIR / snapshot["snapshot_id"]).exists() else f"{snapshot['snapshot_id']}_{now.strftime('%H%M%S')}")
     snap_dir.mkdir(parents=True, exist_ok=True)
-    
+
     if IMAGES_DIR.exists():
         shutil.copytree(IMAGES_DIR, snap_dir / "images", dirs_exist_ok=True)
-        
+
     with open(snap_dir / "metadata.json", "w") as f:
         json.dump(snapshot, f, indent=2, default=str)
+
+    log.info("Imported %d records (%d users) from %s", len(processed), len(stats), csv_path.name)
+    return {"records_processed": len(processed), "status": "ok"}
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("csv_file")
+    csv_path = Path(parser.parse_args().csv_file)
+
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    result = run(csv_path)
+    if result["status"] == "error":
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

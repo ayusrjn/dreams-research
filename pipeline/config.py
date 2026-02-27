@@ -16,6 +16,9 @@ RAW_METADATA_PATH = RAW_DIR / "metadata.json"
 # Processed data directory
 PROCESSED_DIR = DATA_DIR / "processed"
 
+# Pipeline logs
+LOG_DIR = PROCESSED_DIR / "logs"
+
 # SQLite database
 DREAMS_DB_PATH = PROCESSED_DIR / "dreams.db"
 
@@ -53,4 +56,16 @@ D1_SCHEMA = {
 
 # Discrete emotion labels
 DISCRETE_EMOTIONS = ["anger", "disgust", "fear", "joy", "neutral", "sadness", "surprise"]
+
+# Pipeline steps in execution order (name, description)
+PIPELINE_STEPS = [
+    ("import",              "Ingest CSV or D1 data into SQLite"),
+    ("emotions",            "Extract valence/arousal + discrete emotion scores"),
+    ("temporal",            "Compute cyclical time features"),
+    ("location_embeddings", "Geocode + CLIP multi-modal location embeddings"),
+    ("caption_embeddings",  "Sentence-BERT caption embeddings"),
+    ("image_embeddings",    "CLIP image embeddings"),
+    ("verify",              "Verify table/vector alignment"),
+    ("manifest",            "Report master manifest statistics"),
+]
 
