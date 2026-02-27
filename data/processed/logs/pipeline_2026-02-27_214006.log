@@ -1,7 +1,0 @@
-21:40:06 [INFO] Log file: /home/ayush-ranjan/Documents/dreams-research/data/processed/logs/pipeline_2026-02-27_214006.log
-21:40:06 [INFO] ━━━ [import] Ingest CSV or D1 data into SQLite ━━━
-21:40:06 [INFO] Imported 27 records (1 users) from dataset.csv
-21:40:06 [INFO] ━━━ [temporal] Compute cyclical time features ━━━
-21:40:06 [INFO] Computing temporal features for 27 records...
-21:40:06 [INFO] Computed temporal features for 27 records
-21:40:06 [INFO] Pipeline completed successfully.

@@ -1,4 +1,0 @@
-22:43:41 [INFO] Log file: /home/ayush-ranjan/Documents/dreams-research/data/processed/logs/pipeline_2026-02-27_224341.log
-22:43:41 [INFO] ━━━ [import] Ingest CSV or D1 data into SQLite ━━━
-22:43:41 [INFO] Imported 27 records (1 users) from dataset.csv
-22:43:41 [INFO] Pipeline completed successfully.
