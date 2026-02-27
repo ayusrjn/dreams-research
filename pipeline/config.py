@@ -13,18 +13,20 @@ RAW_DIR = DATA_DIR / "raw"
 RAW_IMAGES_DIR = RAW_DIR / "images"
 RAW_METADATA_PATH = RAW_DIR / "metadata.json"
 
-# Phase 2: Processed data paths
+# Processed data directory
 PROCESSED_DIR = DATA_DIR / "processed"
-IMAGE_EMBEDDINGS_PATH = PROCESSED_DIR / "image_embeddings.npy"
-IMAGE_EMBEDDING_INDEX_PATH = PROCESSED_DIR / "image_embedding_index.json"
-TEXT_EMBEDDINGS_PATH = PROCESSED_DIR / "text_embeddings.npy"
-CAPTION_EMBEDDING_INDEX_PATH = PROCESSED_DIR / "caption_embedding_index.json"
-EMOTION_SCORES_PATH = PROCESSED_DIR / "emotion_scores.csv"
-TEMPORAL_FEATURES_PATH = PROCESSED_DIR / "temporal_features.csv"
-PLACE_IDS_PATH = PROCESSED_DIR / "place_ids.csv"
-MASTER_MANIFEST_PATH = PROCESSED_DIR / "master_manifest.parquet"
-FINAL_IMAGE_VECTORS_PATH = PROCESSED_DIR / "final_image_vectors.npy"
-FINAL_TEXT_VECTORS_PATH = PROCESSED_DIR / "final_text_vectors.npy"
+
+# Pipeline logs
+LOG_DIR = PROCESSED_DIR / "logs"
+
+# SQLite database
+DREAMS_DB_PATH = PROCESSED_DIR / "dreams.db"
+
+# ChromaDB
+CHROMA_DB_DIR = PROCESSED_DIR / "chroma_db"
+IMAGE_COLLECTION_NAME = "image_embeddings"
+CAPTION_COLLECTION_NAME = "caption_embeddings"
+LOCATION_COLLECTION_NAME = "location_descriptions"
 
 # Snapshots
 SNAPSHOTS_DIR = DATA_DIR / "snapshots"
@@ -52,15 +54,18 @@ D1_SCHEMA = {
     ]
 }
 
-# Emotion representation schema
-EMOTION_SCHEMA = {
-    "valence": float,
-    "arousal": float,
-    "confidence": float
-}
+# Discrete emotion labels
+DISCRETE_EMOTIONS = ["anger", "disgust", "fear", "joy", "neutral", "sadness", "surprise"]
 
-# Location clustering parameters (Phase 2E)
-# Earth radius ≈ 6,371 km; eps in radians = distance / radius
-DBSCAN_EPS = 50 / 6_371_000  # ~50m in radians for haversine metric
-DBSCAN_MIN_SAMPLES = 1  # Single entries are valid data points
-COORD_DECIMAL_PLACES = 4  # ~11m precision for snap-to-grid
+# Pipeline steps in execution order (name, description)
+PIPELINE_STEPS = [
+    ("import",              "Ingest CSV or D1 data into SQLite"),
+    ("emotions",            "Extract valence/arousal + discrete emotion scores"),
+    ("temporal",            "Compute cyclical time features"),
+    ("location_embeddings", "Geocode + CLIP multi-modal location embeddings"),
+    ("caption_embeddings",  "Sentence-BERT caption embeddings"),
+    ("image_embeddings",    "CLIP image embeddings"),
+    ("verify",              "Verify table/vector alignment"),
+    ("manifest",            "Report master manifest statistics"),
+]
+

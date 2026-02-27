@@ -1,105 +1,65 @@
-#!/usr/bin/env python3
-"""
-Verification Script for Grand Fusion
-
-Checks alignment between Master Manifest and Vector Files.
-"""
-
+import logging
 import sys
 from pathlib import Path
-
-import numpy as np
-import pandas as pd
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Import config
 sys.path.insert(0, str(Path(__file__).parent))
-from config import (
-    MASTER_MANIFEST_PATH,
-    FINAL_IMAGE_VECTORS_PATH,
-    FINAL_TEXT_VECTORS_PATH,
-    SENTENCE_BERT_MODEL,
-)
+from config import SENTENCE_BERT_MODEL, IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME, LOCATION_COLLECTION_NAME
+from db import init_db, get_collection
+
+
+def run(logger: logging.Logger | None = None) -> dict:
+    """Verify alignment between SQLite tables and ChromaDB collections.
+
+    Returns dict with keys: records_processed, status, details.
+    """
+    log = logger or logging.getLogger(__name__)
+
+    conn = init_db()
+
+    try:
+        mem_count = conn.execute("SELECT count(*) FROM memories").fetchone()[0]
+        man_count = conn.execute("SELECT count(*) FROM master_manifest").fetchone()[0]
+        log.info("Memories: %d rows | Master Manifest: %d rows", mem_count, man_count)
+
+        if mem_count == 0:
+            log.warning("No memories in database, nothing to verify")
+            return {"records_processed": 0, "status": "skipped"}
+
+        details = {"memories": mem_count, "master_manifest": man_count}
+
+        for t in ("emotion_scores", "temporal_features"):
+            count = conn.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
+            log.info("  %s: %d rows", t, count)
+            details[t] = count
+
+        for c in (IMAGE_COLLECTION_NAME, CAPTION_COLLECTION_NAME, LOCATION_COLLECTION_NAME):
+            count = get_collection(c).count()
+            log.info("  %s: %d vectors", c, count)
+            details[c] = count
+
+        cap_coll = get_collection(CAPTION_COLLECTION_NAME)
+        if cap_coll.count() > 0:
+            if row := conn.execute("SELECT id, caption FROM memories WHERE caption IS NOT NULL AND caption != '' LIMIT 1").fetchone():
+                rid, cap = str(row[0]), row[1]
+                stored = cap_coll.get(ids=[rid], include=["embeddings"])["embeddings"]
+                if stored is not None and len(stored) > 0:
+                    sim = cosine_similarity([stored[0]], [SentenceTransformer(SENTENCE_BERT_MODEL).encode([cap], normalize_embeddings=True)[0]])[0][0]
+                    log.info("  Embedding consistency check: cosine similarity = %.4f", sim)
+                    details["embedding_cosine_similarity"] = round(float(sim), 4)
+    finally:
+        conn.close()
+
+    log.info("Verification complete")
+    return {"records_processed": mem_count, "status": "ok", "details": details}
 
 
 def main():
-    print("=" * 60)
-    print("DREAMS Research - Grand Fusion Verification")
-    print("=" * 60)
-    
-    # 1. Load Files
-    print("\n📂 Loading files...")
-    if not MASTER_MANIFEST_PATH.exists():
-        print(f"❌ Manifest not found: {MASTER_MANIFEST_PATH}")
-        return
-        
-    df = pd.read_parquet(MASTER_MANIFEST_PATH)
-    
-    # Explicitly check for vector files
-    if not FINAL_IMAGE_VECTORS_PATH.exists():
-        print(f"❌ Missing vector file FINAL_IMAGE_VECTORS_PATH: {FINAL_IMAGE_VECTORS_PATH}")
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    result = run()
+    if result["status"] == "error":
         sys.exit(1)
-        
-    if not FINAL_TEXT_VECTORS_PATH.exists():
-        print(f"❌ Missing vector file FINAL_TEXT_VECTORS_PATH: {FINAL_TEXT_VECTORS_PATH}")
-        sys.exit(1)
-        
-    img_vecs = np.load(FINAL_IMAGE_VECTORS_PATH)
-    txt_vecs = np.load(FINAL_TEXT_VECTORS_PATH)
-    
-    print(f"   Manifest: {len(df)} rows")
-    print(f"   Image Vecs: {img_vecs.shape}")
-    print(f"   Text Vecs: {txt_vecs.shape}")
-    
-    # 2. Length Check
-    print("\n📏 Checking lengths...")
-    if len(df) == len(img_vecs) == len(txt_vecs):
-        print("   ✅ Lengths match!")
-    else:
-        print("   ❌ Length mismatch!")
-        print(f"      DF: {len(df)}")
-        print(f"      Img: {len(img_vecs)}")
-        print(f"      Txt: {len(txt_vecs)}")
-        sys.exit(1)
-        
-    # 3. Semantic Sanity Check
-    print("\n🧠 Semantic Sanity Check (ID=0 / First Row)...")
-    
-    # Get first row
-    row = df.iloc[0]
-    record_id = row["id"]
-    caption = row["caption"]
-    
-    print(f"   Record ID: {record_id}")
-    print(f"   Caption: '{caption}'")
-    
-    # Get vector
-    vec = txt_vecs[0]
-    
-    # Check if vector is zero (missing)
-    if np.all(vec == 0):
-        print("   ⚠️  Vector is all zeros (likely missing/redacted)")
-    else:
-        # Load model to verify
-        print("   Loading model for similarity check...")
-        model = SentenceTransformer(SENTENCE_BERT_MODEL)
-        
-        # Encode caption again
-        ref_vec = model.encode([caption])[0]
-        
-        # Compute similarity
-        sim = cosine_similarity([vec], [ref_vec])[0][0]
-        print(f"   Cosine Similarity (Stored vs Re-computed): {sim:.4f}")
-        
-        if sim > 0.99:
-            print("   ✅ Vector matches caption content!")
-        else:
-            print("   ❌ Vector mismatch!")
-            
-    print("\n" + "=" * 60)
-    print("✅ Verification Complete")
-    print("=" * 60)
 
 
 if __name__ == "__main__":

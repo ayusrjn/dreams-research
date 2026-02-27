@@ -1,125 +1,74 @@
-# DREAMS: 
+# DREAMS Research
 
-**DREAMS** is a computational research pipeline designed to quantitatively validate the existence of "Stable Emotional Fingerprints" in human memory. By disentangling the multimodal dimensions of memory streams—visual, narrative, spatial, and temporal—this project seeks to determine if specific physical locations induce statistically consistent emotional states over time.
+Computational pipeline for validating **Stable Emotional Fingerprints** in human memory. We test whether specific locations induce statistically consistent emotional states over time.
 
----
+## Hypothesis
 
-##  Research Hypothesis
+Physical locations possess a stable emotional fingerprint. When a user visits the same place repeatedly, their emotional state converges to a consistent pattern — measurable via mean emotional vector (μ), covariance (Σ), and entropy (H).
 
-The core premise of this research is that physical and semantic locations possess a **Stable Emotional Fingerprint**. We hypothesize that when a user visits the same place repeatedly, their emotional state converges to a consistent, statistically stable pattern, independent of transient mood fluctuations.
+## Pipeline
 
-To test this, we define the analysis unit at the $(u, p) = (user\_id, place\_id)$ level to preserve individual narrative contexts.
+Single-command orchestrator that transforms raw memory logs into research-ready vectors.
 
----
+```bash
+# Full pipeline
+python pipeline/run_pipeline.py clinical_depression_study/dataset.csv
 
-##  Mathematical Framework
+# Or use Make
+make pipeline
+```
 
-We model the emotional state of a memory at time $t$ as a low-dimensional continuous vector:
+### Steps
 
-$$C_{t} = [valence, arousal]$$
+| # | Step | Model / Tool | Output |
+|---|------|-------------|--------|
+| 1 | **Import** | — | CSV → SQLite `memories` |
+| 2 | **Emotions** | `Mavdol/NPC-Valence-Arousal-Prediction` + `j-hartmann/emotion-english-distilroberta-base` | SQLite `emotion_scores` |
+| 3 | **Temporal** | sin/cos hour encoding | SQLite `temporal_features` |
+| 4 | **Location Embeddings** | Nominatim + CLIP `ViT-B/32` (text+image fusion) | ChromaDB + SQLite `location_descriptions` |
+| 5 | **Caption Embeddings** | Sentence-BERT `all-MiniLM-L6-v2` | ChromaDB `caption_embeddings` |
+| 6 | **Image Embeddings** | CLIP `ViT-B/32` | ChromaDB `image_embeddings` |
+| 7 | **Verify** | — | Alignment check |
+| 8 | **Manifest** | — | `master_manifest` view report |
 
-where $valence \in [0, 1]$ (Unpleasant $\to$ Pleasant) and $arousal \in [0, 1]$ (Calm $\to$ Excited).
+### CLI Options
 
-To quantify the stability of a location's fingerprint, we compute the following metrics for each user-place pair $(u, p)$:
+```bash
+python pipeline/run_pipeline.py dataset.csv --only emotions,temporal   # run specific steps
+python pipeline/run_pipeline.py dataset.csv --skip location_embeddings # skip slow steps
+python pipeline/run_pipeline.py dataset.csv --resume                   # resume after crash
+python pipeline/run_pipeline.py dataset.csv --export                   # export parquet
+python pipeline/run_pipeline.py --source d1                            # pull from Cloudflare D1
+```
 
-### 1. Mean Emotional State (The "Center")
-The expected emotional baseline for a specific location:
-$$\mu_{u,p} = \mathbb{E}[C_{t}]$$
+## Data Schema
 
-### 2. Emotional Variability
-We measure the dispersion of emotional states using the covariance matrix:
-$$\Sigma_{u,p} = Cov(C_{t})$$
+### SQLite (`data/processed/dreams.db`)
 
-### 3. Stability (Variance Ellipse)
-The volatility of the location is proportional to the area of the variance ellipse defined by $\Sigma_{u,p}$:
-$$A_{u,p} \propto \sqrt{|\Sigma_{u,p}|}$$
-*   **Small Area**: High stability (Strong Fingerprint).
-*   **Large Area**: Low stability (Volatile Context).
+| Table / View | Description |
+|:---|:---|
+| `memories` | Raw metadata (user, caption, timestamp, GPS, image path) |
+| `emotion_scores` | Valence, arousal, + 7 discrete emotion probabilities |
+| `temporal_features` | Circadian sin/cos + relative day |
+| `location_descriptions` | Geocoded location text + display name |
+| `master_manifest` | **VIEW** — unified join of all tables |
 
-### 4. Emotion Entropy
-To assess the consistency of discrete emotion types (e.g., Joy vs. Fear), we calculate the entropy of the probability distribution:
-$$H_{u,p} = -\sum_{k} \overline{P}_{u,p}^{k} \log \overline{P}_{u,p}^{k}$$
+### ChromaDB (`data/processed/chroma_db/`)
 
----
+| Collection | Dim | Description |
+|:---|:---|:---|
+| `image_embeddings` | 512 | CLIP visual embeddings |
+| `caption_embeddings` | 384 | S-BERT narrative embeddings |
+| `location_descriptions` | 512 | CLIP text+image fused location embeddings |
 
-##  Pipeline Architecture
-
-The pipeline executes in three phases to transform raw logs into research-ready vectors.
-
-### Phase 1: Acquisition & Freezing
-*   **Objective**: Establish an immutable "Snapshot" of the raw data.
-*   **Process**: Pulls multimodal logs (images, captions, metadata) from the Cloudflare D1 database and freezes them to ensure reproducibility.
-
-### Phase 2: Feature Extraction
-We extract disentangled representations using state-of-the-art models:
-*   **Visual**: CLIP (ViT-B/32) for scene semantics.
-*   **Semantic**: Sentence-BERT (`all-MiniLM-L6-v2`) for narrative structure.
-*   **Spatial**: **DBSCAN Clustering** ($\epsilon \approx 50m$) converts raw GPS coordinates into categorical Place IDs ($p$), enabling the $(u, p)$ analysis.
-*   **Temporal**: Cyclic encoding ($\sin/\cos$) of time-of-day.
-
-### Phase 3: Grand Fusion
-*   **Objective**: Synthesis.
-*   **Process**: Aligns all scalar features into a `master_manifest.parquet` and synchronizes high-dimensional arrays (`.npy`) for longitudinal analysis.
-
----
-
-## Research Outcomes
-
-Based on the stability metrics defined above, we aim to categorize locations into three distinct types relative to a user's baseline:
-
-1.  **Emotional Safe Space**: High Valence, Low Arousal, **Low Variance** ($A_{u,p} \to 0$).
-2.  **Chronic Stressor**: Low Valence, High Arousal, **Low Variance** (Consistently negative).
-3.  **Emotionally Volatile**: High Variance ($A_{u,p} \to \infty$), indicating the location does not exert a strong emotional anchor.
-
----
-
-##  Future Directions
-
-This framework lays the groundwork for distinguishing between **Scene-Driven** vs. **Place-Driven** stability. Future experiments will test whether emotional consistency is driven by visual similarity (e.g., "I feel calm when I see trees") or contextual identity (e.g., "I feel calm because I am at Home," regardless of the visual view).
-
----
-
-##  Getting Started
-
-### Prerequisites
-*   Python 3.10+
-*   CUDA-capable GPU (recommended)
-
-### Installation
+## Setup
 
 ```bash
 git clone https://github.com/ayusrjn/dreams-research.git
 cd dreams-research
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv env
+source env/bin/activate
 pip install -r requirements.txt
 ```
 
-### Reproduction
-
-```bash
-# 1. Pull Data
-python pipeline/pull_data.py
-
-# 2. Extract Features
-python pipeline/extract_image_embeddings.py
-python pipeline/extract_caption_embeddings.py
-python pipeline/extract_emotions.py
-python pipeline/extract_temporal_features.py
-python pipeline/extract_location_clusters.py
-
-# 3. Fuse
-python pipeline/create_master_manifest.py
-```
-
----
-
-##  Data Schema
-
-| File | Shape | Description |
-| :--- | :--- | :--- |
-| `master_manifest.parquet` | $(N, M)$ | Metadata, Place IDs, Emotion Scores ($C_t$). |
-| `final_image_vectors.npy` | $(N, 512)$ | CLIP Visual Embeddings. |
-| `final_text_vectors.npy` | $(N, 384)$ | S-BERT Narrative Embeddings. |
-
----
+Requires Python 3.10+ and a CUDA GPU (recommended).
