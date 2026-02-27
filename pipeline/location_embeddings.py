@@ -13,7 +13,7 @@ from sklearn.cluster import DBSCAN
 sys.path.insert(0, str(Path(__file__).parent))
 from config import RAW_IMAGES_DIR, RAW_METADATA_PATH, LOCATION_COLLECTION_NAME
 from db import get_collection
-from location_semantic.app.services.geocoder import reverse_geocode
+from geocoder import reverse_geocode
 
 def get_nominatim_user_agent():
     return "dreams-research/1.0 (contact@dreams-research.org)"

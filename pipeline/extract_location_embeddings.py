@@ -11,7 +11,7 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).parent))
 from config import RAW_METADATA_PATH, RAW_IMAGES_DIR, LOCATION_COLLECTION_NAME
 from db import init_db, get_collection
-from location_semantic.app.services.geocoder import reverse_geocode
+from geocoder import reverse_geocode
 
 
 def get_nominatim_user_agent():
