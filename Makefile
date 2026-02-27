@@ -3,13 +3,16 @@
 
 DATASET ?= clinical_depression_study/dataset.csv
 
-.PHONY: pipeline pipeline-d1 pipeline-resume verify manifest clean-db help
+.PHONY: install pipeline pipeline-d1 pipeline-resume verify manifest clean-db help
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-pipeline: ## Run full pipeline from CSV dataset
+install: ## Install Python dependencies
+	pip install -r requirements.txt
+
+pipeline: install ## Run full pipeline from CSV dataset
 	python pipeline/run_pipeline.py $(DATASET)
 
 pipeline-d1: ## Pull from Cloudflare D1 and run full pipeline
