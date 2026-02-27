@@ -1,5 +1,4 @@
-# DREAMS Research Pipeline
-# =======================
+
 # One-command shortcuts for common workflows.
 
 DATASET ?= clinical_depression_study/dataset.csv

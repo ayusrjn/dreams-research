@@ -1,0 +1,23 @@
+21:41:46 [INFO] Log file: /home/ayush-ranjan/Documents/dreams-research/data/processed/logs/pipeline_2026-02-27_214146.log
+21:41:46 [INFO] ━━━ [import] Ingest CSV or D1 data into SQLite ━━━
+21:41:46 [INFO] Imported 27 records (1 users) from dataset.csv
+21:41:46 [INFO] ━━━ [temporal] Compute cyclical time features ━━━
+21:41:46 [INFO] Computing temporal features for 27 records...
+21:41:46 [INFO] Computed temporal features for 27 records
+21:41:46 [INFO] ━━━ [verify] Verify table/vector alignment ━━━
+21:41:51 [INFO] Memories: 27 rows | Master Manifest: 27 rows
+21:41:51 [INFO]   emotion_scores: 0 rows
+21:41:51 [INFO]   temporal_features: 27 rows
+21:41:51 [INFO]   image_embeddings: 27 vectors
+21:41:51 [INFO]   caption_embeddings: 27 vectors
+21:41:51 [INFO]   location_descriptions: 27 vectors
+21:41:51 [ERROR] Step 'verify' raised an exception: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+Traceback (most recent call last):
+  File "/home/ayush-ranjan/Documents/dreams-research/pipeline/run_pipeline.py", line 203, in main
+    result = fn(logger)
+  File "/home/ayush-ranjan/Documents/dreams-research/pipeline/run_pipeline.py", line 61, in <lambda>
+    return lambda log: fn(logger=log)
+  File "/home/ayush-ranjan/Documents/dreams-research/pipeline/verify_alignment.py", line 47, in run
+    if stored and len(stored) > 0:
+ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+21:41:51 [WARNING] Pipeline completed with errors. Use --resume to retry failed steps.
